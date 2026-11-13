@@ -1,0 +1,14 @@
+# Fichiers intermediaires LTspice -- regenerables depuis les scripts
+*.asc
+*.net
+*.raw
+*.log
+*.db
+_find_tmp_*.*
+
+# Resultats CSV -- regenerables, volumineux
+results/
+
+# Python
+__pycache__/
+*.pyc
