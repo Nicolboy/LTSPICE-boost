@@ -335,7 +335,7 @@ l'avoir lue à la source.
 
 ### Switch (N-MOS 100V, TO-252) — trois candidats, vérifiés sur fiche officielle
 
-| | Infineon `IPD050N10N5` | Vishay `SUD70090E` | onsemi `NVD6824NL` |
+| | Infineon [`IPD050N10N5`](https://infineon.com/cms/en/product/power/mosfet/n-channel/ipd050n10n5) | Vishay [`SUD70090E`](https://www.vishay.com/docs/65437/sud70090e.pdf) | onsemi [`NVD6824NL`](https://www.onsemi.com/products/discrete-power-modules/mosfets/low-medium-voltage-mosfets/nvd6824nl) |
 |---|---|---|---|
 | `Rds(on)` | 4,3mΩ typ / 5,0mΩ max @10V/40A | 7,4mΩ typ / 8,9mΩ max @10V/20A | 16,5mΩ typ / 20mΩ max @10V/20A |
 | `Qg` total | 51nC @0-10V/40A | 33nC @10V/20A | 66nC @10V/20A |
@@ -350,7 +350,7 @@ le bilan à ces niveaux de courant (§6.2).
 
 ### Diode (Schottky ~100V, TO-252/DPAK) — trois candidats, vérifiés sur fiche officielle
 
-| | onsemi `MBRD5H100T4G` | Vishay `VS-6CWQ10FN-M3` | Diodes Inc `SBR15U100CTL` |
+| | onsemi [`MBRD5H100T4G`](https://www.onsemi.com/products/discretes-drivers/diodes-rectifiers/schottky-diodes-schottky-rectifiers/mbrd5h100t4g) | Vishay [`VS-6CWQ10FN-M3`](https://www.vishay.com/en/product/93318/) | Diodes Inc [`SBR15U100CTL`](https://www.diodes.com/part/view/SBR15U100CTL) |
 |---|---|---|---|
 | `Vf` max | 0,71V @5A/25°C (0,60V@125°C) | 0,63V @3A/125°C (0,81V@25°C) | 0,80V @7,5A/25°C (0,65V@125°C) |
 | Configuration | Simple (pin 1 NC) | Double cathode commune, 3,5A/jambe | Double cathode commune |
@@ -368,27 +368,165 @@ encore croisés pour ces six références précises — seulement les
 fiches techniques officielles lues directement. À faire avant de
 figer un choix final.
 
-### Prochaine étape identifiée, pas encore engagée
+### Risque EMI identifié — traité au §9
 
-Risque EMI (`dV/dt`/`dI/dt` des switchs rapides, anneau de résonance
+Le choix ci-dessus ne traite que le rendement/taille/stabilité. Un
+risque EMI (`dV/dt`/`dI/dt` des switchs rapides, anneau de résonance
 de la boucle chaude avec les inductances/capacités parasites du PCB
-et des composants eux-mêmes) qui doit encadrer le choix final plus
-que la seule perte. Prévu, pas encore fait dans cette passe :
-- Estimation des pertes par effet Joule (`Rds(on)`×`Irms²`) et de
-  commutation (`Eon`/`Eoff` via `Qg`/`tr`/`tf`) des 3 candidats switch
-  à leur vitesse native (pas ralentie), pour trancher le compromis
-  rapidité/EMI vs perte.
-- Identification et estimation des éléments parasites réels de la
-  boucle chaude (inductance de piste/boîtier, capacité `Coss`/`Cj`
-  des candidats) pour situer la fréquence et l'amplitude de résonance
-  attendue — pas supposée, à calculer depuis les composants retenus
-  et une revue du placement.
-- Question ouverte, non tranchée : les outils actuels (LTspice +
-  scripts Python de ce chapitre) suffisent-ils à une estimation CEM
-  conduite, ou faut-il un outil dédié (ex. QSPICE). À statuer avant de
-  lancer cette passe, pas en cours de route.
+et des composants eux-mêmes) doit aussi encadrer le choix final — voir
+§9 pour l'estimation des pertes natives des 3 candidats switch et le
+rôle des 3 candidats diode dans l'anneau de boucle.
 
-## 9. Ce qui reste ouvert / différé
+## 9. EMI/résonance — pertes natives des 3 candidats switch, rôle de la diode dans l'anneau de boucle
+
+Un switch rapide (meilleur `Rds(on)` ET fronts rapides, cas de
+l'`IPD050N10N5` ci-dessus) peut coûter plus cher en CEM qu'il ne
+rapporte en pertes — un switch plus lent avec moins de perte `Coss`
+pourrait être préférable. Côté diode, sa capacité de jonction
+participe avec les inductances parasites de la boucle chaude à un
+système résonant. Démarche : d'abord évaluer si le compromis existe
+réellement (pertes, dépassement de tension) avant de changer quoi que
+ce soit au choix du §8.
+
+### `Qgd`/`Cj` vérifiés à la source, pas réutilisés tels quels
+
+`Qgd` n'était pas encore extrait au §8 (qui ne donnait que `Qg`
+total) — relu directement sur chaque fiche officielle : `IPD050N10N5`
+10nC typ/16nC max (`VDD`=50V/`ID`=40A) ; `SUD70090E` 7,5nC typ
+(`VDS`=50V/`VGS`=10V/`ID`=20A) ; `NVD6824NL` 18nC typ
+(`VGS`=10V/`VDS`=80V/`ID`=20A).
+
+`Cj` diode relue au point proche du régime réel (~80-100V), pas le
+point tabulé à bas `VR` souvent seul publié en table — piège
+vérifié : `VS-6CWQ10FN-M3` publie 92pF à `VR`=5V en table, mais sa
+courbe `C(VR)` tombe à ~28pF au point réel (~90V), un facteur ~3,3 de
+différence. Les deux autres candidats (`MBRD5H100T4G` ~130pF,
+`SBR15U100CTL` ~53pF au même point, ce dernier extrapolé au-delà de
+la courbe tracée) n'avaient de toute façon qu'un graphe, pas de table.
+
+### Pertes à vitesse native (pas ralentie)
+
+Méthode : pas les `tr`/`tf` publiés (conditions de test différentes
+d'un fabricant à l'autre, piège déjà signalé §6.2), mais recalculés
+depuis `Qgd` et le driver de grille déjà retenu pour cet étage (4A pic
+source / 6A pic puits) :
+
+```
+t_sw_on  = Qgd / I_source     t_sw_off = Qgd / I_sink
+Eon  = 0,5 * Vds * I_valley * t_sw_on
+Eoff = 0,5 * Vds * I_peak   * t_sw_off
+Psw  = (Eon + Eoff) * fsw
+```
+
+Aucune nouvelle simulation : calculé directement depuis les points
+déjà mesurés au §6 (switch=Si/diode=Schottky générique, 20V→80V/40W,
+L=47µH, les 4 fréquences) — le courant au point de fonctionnement ne
+dépend pas du `Rds(on)`/`Qgd` réellement monté.
+
+| Switch | `fsw` | `P_cond` (W) | `Psw` (W) | `P_total` (W) | `Psw`/`Ptotal` |
+|---|---|---|---|---|---|
+| `IPD050N10N5` | 100kHz | 0,015 | 0,030 | 0,045 | 66% |
+| `IPD050N10N5` | 200kHz | 0,013 | 0,063 | 0,076 | 82% |
+| `IPD050N10N5` | 400kHz | 0,014 | 0,138 | 0,152 | 91% |
+| `SUD70090E` | 100kHz | 0,026 | 0,022 | 0,049 | 46% |
+| `SUD70090E` | 200kHz | 0,023 | 0,047 | 0,070 | 67% |
+| `SUD70090E` | 400kHz | 0,025 | 0,103 | 0,128 | 81% |
+| `NVD6824NL` | 100kHz | 0,059 | 0,054 | 0,113 | 48% |
+| `NVD6824NL` | 200kHz | 0,052 | 0,113 | 0,165 | 69% |
+| `NVD6824NL` | 400kHz | 0,055 | 0,248 | 0,303 | 82% |
+
+![Pertes switch à vitesse native, conduction vs commutation](plots/emi_switch_losses.png)
+
+**Constat** : même à vitesse native, la commutation **domine** le
+bilan (66-91% selon candidat/fréquence) — à l'opposé du §6.2, qui
+trouvait la conduction dominante avec les modèles génériques. Mais en
+absolu, `P_total` reste **très faible** (45 à 303mW sur 40W) : les 3
+candidats sont largement surdimensionnés en courant pour cette
+application. La rapidité de l'`IPD050N10N5` ne coûte donc pas
+significativement en pertes absolues.
+
+### Boucle chaude : estimation par placement (pré-routage)
+
+Carte déjà placée mais pas encore routée (aucune géométrie de piste
+réelle disponible) — estimation par placement + littérature
+uniquement, sert de budget cible, à revérifier au routage. Périmètre
+mesuré directement sur le placement réel de l'inductance/switch/diode
+de cet étage : **52mm**. Heuristique nH/cm (carte sans plan de masse
+rapproché actuellement) : ~8-12nH/cm pour une boucle sans retour
+proche, ordre de grandeur courant en littérature de layout pour
+boucles de commutation ; un retour soigné au routage viserait plutôt
+~3-5nH/cm. Fourchette résultante : **42-62nH** (état actuel) contre
+**16-26nH** (cible routage).
+
+### Calcul à la main vs confirmation SPICE
+
+Calcul : `f0 = 1/(2π√(Lboucle×(Coss+Cj)))`,
+`Vpic = Vout + Ipk_L×√(Lboucle/(Coss+Cj))`. Confirmation SPICE : les 9
+combinaisons switch×diode, point nominal, `Lstray`=52nH (état actuel) :
+
+| Switch | Diode | `f0` calculé | `Vpic` calculé | `Vds` simulé | Écart |
+|---|---|---|---|---|---|
+| `IPD050N10N5` | `MBRD5H100T4G` | 26,5MHz | 104,1V | 83,9V | -19% |
+| `IPD050N10N5` | `VS-6CWQ10FN-M3` | 28,8MHz | 106,1V | 83,8V | -21% |
+| `SUD70090E` | `MBRD5H100T4G` | 22,3MHz | 100,3V | 84,1V | -16% |
+| `NVD6824NL` | `VS-6CWQ10FN-M3` | 47,6MHz | 123,2V | 83,5V | -32% |
+
+(tableau complet des 9 combinaisons : voir le script de reproduction)
+
+![Dépassement de tension : calcul (borne sup.) vs simulation](plots/emi_resonance_overshoot.png)
+
+**Écart systématique, toujours dans le même sens** (calculé > simulé,
+16 à 32%) — pas un écart aléatoire, mais un artefact de modélisation
+identifié : la formule à la main suppose que tout le courant
+d'inductance charge le réservoir `Lstray`-`C` depuis zéro, comme si
+aucun chemin de roue libre n'existait. En réalité, les 3 candidats
+diode sont des Schottky/SBR **sans recouvrement inverse** (même
+argument qui a fait gagner `NTSV20U100CT` au §6.1) : dès que le switch
+bloque, la diode conduit quasi instantanément et **clampe** le nœud de
+commutation près de `Vout`, consommant l'essentiel de l'énergie qui
+aurait fait sonner le réservoir LC. La formule à la main reste une
+**borne supérieure conservatrice utile**, mais surestime le risque réel
+pour ce jeu de candidats.
+
+**Dépassement réel observé** : `Vds_switch_max` ≈ 83,5-84,1V pour
+`Vout_avg` ≈ 78,5-80V, soit **4 à 5,5V (~5-7%)** — quel que soit le
+candidat. Sensibilité à `Lstray` testée (52nH vs 21nH cible routage) :
+dépassement **quasi identique** — le clamp par la diode rend le
+dépassement insensible à `Lstray` dans cette fourchette.
+
+### Verdict
+
+- **Risque de dépassement de tension sur le switch : faible**, grâce
+  au clamp quasi-instantané des diodes Schottky/SBR retenues.
+- **Risque dI/dt / spectre conduit : non tranché par cette passe** —
+  le faible dépassement de tension ne dit rien du `dI/dt` réel dans la
+  boucle, grandeur pertinente pour le spectre CEM conduit, non mesurée
+  ici.
+- Le compromis rapidité/EMI évoqué en préambule **ne se lit pas** dans
+  les pertes (toutes sous 0,3W) ni dans le dépassement de tension
+  (insensible au candidat) pour ce jeu de candidats précis.
+
+### Ce qui reste ouvert sur ce point
+
+- **Spectre CEM conduit** (réseau LISN + FFT) — pas fait dans cette
+  passe : le faible dépassement de tension trouvé rendait la
+  justification moins pressante dans l'immédiat.
+- **Estimation de boucle pré-routage** — fourchette de littérature,
+  à revérifier une fois la boucle réellement routée.
+- **`Coss` du `NVD6824NL`** lu à `VDS`=25V (pas 50-80V comme les 2
+  autres candidats) — probablement surestimé au point réel, sans
+  autre donnée publiée pour corriger. N'affecte pas le verdict (ce
+  candidat n'est de toute façon pas le switch recommandé au §8).
+- **Extraction de la période d'oscillation depuis la forme d'onde** —
+  abandonnée après une anomalie d'outillage sans rapport avec les
+  résultats ; la comparaison `Vpic`/`Vds_switch_max` reste la
+  vérification retenue, `f0` n'est donné qu'au titre du calcul à la
+  main.
+- **Candidats diode avec recouvrement réel** non retestés — écartés
+  dès le §6.1, mais le clamp qui explique le faible dépassement ici
+  dépend spécifiquement de l'absence de recouvrement.
+
+## 10. Ce qui reste ouvert / différé
 
 - **Verdict switch (Si vs GaN) non tranché, pas négatif** — le `dtmax`
   =1ns nécessaire pour tenir les 240 points en temps praticable

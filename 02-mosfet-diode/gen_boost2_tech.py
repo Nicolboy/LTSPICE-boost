@@ -183,6 +183,16 @@ def build(point_name, vin, vout_target, pout, d, period, out_path,
     # --- diode reelle (techno parametree) : anode=n_sw, cathode=vout ---
     two_pin(s, "diode", 1120, 260, "D1", "DTECH", "n_sw", "vout")
 
+    # --- Cj diode EXPLICITE (candidats reels REAL_DIODES uniquement --
+    # voir switch_diode_models.py) : participe au systeme resonant avec
+    # Coss_TECH + Lstray. Les diodes generiques du ch.2 (DIODES["Schottky"]
+    # / ["Ultrafast"]) n'ont PAS ce champ -- aucune capacite ajoutee pour
+    # elles, comportement du ch.2 inchange. ---
+    diode = DIODES[diode_tech]
+    if diode.get("cj_f"):
+        two_pin(s, "cap", 1120, 460, "Cj_DIODE", f"{diode['cj_f']*1e12:.2f}p",
+                "n_sw", "vout")
+
     # --- Coss REEL de la techno switch, en shunt du noeud de commutation
     # -- remplace la capacite numerique non sourcee du chapitre 1 (sert
     # aussi a la convergence, mais a maintenant une valeur sourcee). ---

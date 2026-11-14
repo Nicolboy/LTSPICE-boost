@@ -134,6 +134,134 @@ LSTRAY_BY_L_H = {
 }
 
 
+# --- Candidats REELS (TO-252), identifies au chapitre 2 S8 (voir README)
+# pour remplacer les pieces generiques ci-dessus. Utilises UNIQUEMENT par
+# estimate_switch_losses.py / run_resonance_check.py (volet EMI/resonance,
+# S9 du README) -- PAS par gen_boost2_tech.py/SWITCHES/DIODES pour la
+# comparaison generique Si/GaN/Schottky/ultrafast du balayage principal,
+# gardee intacte et tracable separement.
+#
+# Qgd/Coss lus directement sur chaque fiche officielle (pas un resume de
+# recherche) -- sources et conditions de test citees par candidat.
+REAL_SWITCHES = {
+    "IPD050N10N5": dict(
+        manufacturer="Infineon",
+        rds_on_ohm=0.0043, rds_on_basis="typ",  # VGS=10V, ID=40A
+        qgd_nc=10.0, qgd_basis="typ",            # VDD=50V, ID=40A, VGS=0-10V
+        qgd_nc_max=16.0,
+        coss_f=560e-12, coss_basis="typ",        # VGS=0V, VDS=50V, f=1MHz
+        vgs_drive=10.0,
+        src="datasheet Infineon IPD050N10N5, p.4 Table 5/6 (lu directement)",
+    ),
+    "SUD70090E": dict(
+        manufacturer="Vishay",
+        rds_on_ohm=0.0074, rds_on_basis="typ",   # VGS=10V, ID=20A
+        qgd_nc=7.5, qgd_basis="typ",             # VDS=50V, VGS=10V, ID=20A
+        qgd_nc_max=None,
+        coss_f=845e-12, coss_basis="typ",        # VGS=0V, VDS=50V, f=1MHz
+        vgs_drive=10.0,
+        src="datasheet Vishay SUD70090E, p.2 Dynamic table (lu directement)",
+    ),
+    "NVD6824NL": dict(
+        manufacturer="onsemi",
+        rds_on_ohm=0.0165, rds_on_basis="typ",   # VGS=10V, ID=20A
+        qgd_nc=18.0, qgd_basis="typ",            # VGS=10V, VDS=80V, ID=20A
+        qgd_nc_max=None,
+        coss_f=187e-12, coss_basis="typ",        # VGS=0V, VDS=25V, f=1MHz --
+        # ATTENTION condition VDS=25V, PAS 50V comme les 2 autres candidats :
+        # Coss decroit fortement avec VDS (depletion MOS), donc CETTE valeur
+        # est probablement SURESTIMEE par rapport a Coss au point reel
+        # (VDS~80V) -- aucune autre valeur publiee sur la fiche a VDS plus
+        # eleve, flag explicite plutot que comparaison trompeuse.
+        vgs_drive=10.0,
+        src="datasheet onsemi NVD6824NL, p.2 Charges/Capacitances table (lu directement)",
+    ),
+}
+
+# Cj a un point proche de VR~80-100V reel (PAS le point tabule a bas VR,
+# souvent le seul publie en table). Pour les 3 candidats, lu sur la courbe
+# C(VR) de la fiche (method=graph_read, valeur approximative +/- tolerance
+# indiquee), le trace precis au pixel n'etant pas disponible depuis une
+# extraction PDF texte.
+REAL_DIODES = {
+    "MBRD5H100T4G": dict(
+        manufacturer="onsemi",
+        vf_v=0.71, vf_basis="max", vf_i_a=5.0,   # p.2 tbl, IF=5A, Tj=25degC
+        cj_pf=130, cj_vr_v=90, cj_tol_pct=20,
+        cj_basis="graph_read",
+        cj_note="Fig.5 p.3 (C vs VR, f=1MHz, TJ=25degC) : lu visuellement au "
+                "point le plus proche de VR=90V, pas le point bas-tension "
+                "(la courbe n'a pas de table de valeurs a VR eleve).",
+        src="datasheet onsemi MBRD5H100T4G, p.2-3 (lu directement)",
+    ),
+    "VS-6CWQ10FN-M3": dict(
+        manufacturer="Vishay",
+        vf_v=0.63, vf_basis="max", vf_i_a=3.0,   # p.2 tbl, IF=3A/jambe, Tj=125degC
+        cj_pf=28, cj_vr_v=90, cj_tol_pct=25,
+        cj_basis="graph_read",
+        cj_note="ATTENTION : la table p.2 publie 92pF a VR=5V seulement -- "
+                "valeur tabulee a bas VR, PAS reutilisable telle quelle. "
+                "Fig.3 p.3 montre Cj decroitre fortement jusqu'a VR=100V ; "
+                "lu visuellement au point le plus proche de VR=90V : ~28pF, "
+                "soit ~3x PLUS BAS que le point tabule a 5V.",
+        src="datasheet Vishay VS-6CWQ10FN-M3, p.2-3 (lu directement)",
+    ),
+    "SBR15U100CTL": dict(
+        vf_v=0.80, vf_basis="max", vf_i_a=7.5,   # p.2 tbl, IF=7.5A/jambe, Tj=25degC
+        manufacturer="Diodes Incorporated",
+        cj_pf=53, cj_vr_v=90, cj_tol_pct=35,
+        cj_basis="graph_read_extrapolated",
+        cj_note="Fig.3 p.3 (log-log, 0,1-100V) : la courbe tracee s'arrete "
+                "visuellement vers VR~45V (~75pF), PAS de donnee visible "
+                "jusqu'a 100V -- extrapole en loi sqrt(V) typique Schottky/SBR "
+                "(Cj ~ 1/sqrt(VR+Vbi)) : 75pF x sqrt(45/90) ~53pF. Tolerance "
+                "plus large (35%) car extrapolation, pas lecture directe.",
+        src="datasheet Diodes Incorporated SBR15U100CTL (DS35119 Rev.3), "
+            "p.3 (lu directement)",
+    ),
+}
+
+
+# --- Fusion des candidats REELS dans SWITCHES/DIODES (memes cles que les
+# modeles generiques) pour que gen_boost2_tech.build() les utilise sans
+# modification -- switch_tech="IPD050N10N5" etc. marche directement.
+# tr_ns/tf_ns des candidats reels = PAS les valeurs tr/tf publiees (test
+# a des RG/VDS differents d'un fabricant a l'autre, piege deja signale
+# S6.2), mais le temps de commutation Qgd/driver (voir README S9 --
+# MEME modele que les pertes de commutation, pour rester coherent entre
+# le calcul direct et la simulation). ---
+_GATE_DRIVER_ISOURCE_A = 4.0  # A, pic source -- driver de grille retenu
+_GATE_DRIVER_ISINK_A = 6.0    # A, pic puits -- idem
+for _name, _s in REAL_SWITCHES.items():
+    SWITCHES[_name] = dict(
+        part=_name,
+        rd_ohm=_s["rds_on_ohm"],
+        coss_f=_s["coss_f"],
+        vgs_drive=_s["vgs_drive"],
+        tr_ns=(_s["qgd_nc"] * 1e-9 / _GATE_DRIVER_ISOURCE_A) * 1e9,
+        tf_ns=(_s["qgd_nc"] * 1e-9 / _GATE_DRIVER_ISINK_A) * 1e9,
+        src=_s["src"],
+    )
+
+# Cj ajoutee en capacite EXPLICITE en parallele de la diode (meme esprit
+# que Coss_TECH deja fait pour le switch) -- PAS les parametres CJO/VJ/M
+# du modele diode SPICE (demanderaient plus d'un point de donnee pour
+# etre ajustes correctement).
+for _name, _d in REAL_DIODES.items():
+    DIODES[_name] = dict(
+        part=_name,
+        vf_target=_d["vf_v"], i_test=_d["vf_i_a"],
+        tt_s=0.0,  # Schottky/SBR, pas de recouvrement par nature (meme
+                   # argument que DIODES["Schottky"] generique)
+        cj_f=_d["cj_pf"] * 1e-12,
+        src=_d["src"],
+    )
+    DIODES[_name]["is_a"] = solve_is(DIODES[_name]["vf_target"],
+                                      DIODES[_name]["i_test"])
+    DIODES[_name]["n"] = 1.0
+    DIODES[_name]["rs_ohm"] = 0.010
+
+
 if __name__ == "__main__":
     for tech, s in SWITCHES.items():
         print(f"SWITCH {tech:9s} ({s['part']}): RD={s['rd_ohm']*1e3:.1f}mOhm "
