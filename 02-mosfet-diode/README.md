@@ -67,7 +67,7 @@ sur les grandeurs publiées (`switch_diode_models.py`) :
   tr≈3,56ns, tf≈2,21ns. **Hypothèse de modélisation documentée dans
   `switch_diode_models.py`, pas une donnée datasheet.**
 - **Diode** : `IS` résolu (pas deviné) pour que le modèle statique
-  ($N V_T \ln(I/I_S) + I R_S$) retombe sur le `Vf` datasheet au courant de
+  ($\Large N V_T \ln(I/I_S) + I R_S$) retombe sur le `Vf` datasheet au courant de
   test publié. Schottky : `TT=0` (porteurs majoritaires, pas de
   recouvrement par nature). Ultrafast : `TT=16ns`, calé sur le `trr`
   typique publié (testé à faible courant par le fabricant — voir limites
@@ -416,11 +416,11 @@ depuis `Qgd` et le driver de grille déjà retenu pour cet étage (4A pic
 source / 6A pic puits) :
 
 $$
-t_{on} = \frac{Q_{gd}}{I_{source}} \qquad t_{off} = \frac{Q_{gd}}{I_{sink}}
+\Large t_{on} = \frac{Q_{gd}}{I_{source}} \qquad t_{off} = \frac{Q_{gd}}{I_{sink}}
 $$
 
 $$
-E_{on} = \tfrac{1}{2}\, V_{ds}\, I_{valley}\, t_{on} \qquad
+\Large E_{on} = \tfrac{1}{2}\, V_{ds}\, I_{valley}\, t_{on} \qquad
 E_{off} = \tfrac{1}{2}\, V_{ds}\, I_{peak}\, t_{off} \qquad
 P_{sw} = (E_{on} + E_{off})\, f_{sw}
 $$
@@ -470,7 +470,7 @@ boucles de commutation ; un retour soigné au routage viserait plutôt
 Calcul :
 
 $$
-f_0 = \frac{1}{2\pi\sqrt{L_{boucle}\,(C_{oss}+C_j)}} \qquad
+\Large f_0 = \frac{1}{2\pi\sqrt{L_{boucle}\,(C_{oss}+C_j)}} \qquad
 V_{pic} = V_{out} + I_{pk,L}\sqrt{\frac{L_{boucle}}{C_{oss}+C_j}}
 $$
 

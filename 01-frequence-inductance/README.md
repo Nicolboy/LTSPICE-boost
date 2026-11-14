@@ -37,7 +37,7 @@ RS=10mΩ`) — aucun des deux n'est un candidat de technologie précis.
 fréquences candidates (100/200/300/400kHz, toutes au-delà du spectre
 audio) = 48 points. Duty cycle résolu par bissection contre le `Vout`
 simulé (`find_duty1.py`), jamais la seule formule idéale CCM
-$D = 1 - V_{in}/V_{out}$ — robuste que le point tombe en CCM ou DCM.
+$\Large D = 1 - V_{in}/V_{out}$ — robuste que le point tombe en CCM ou DCM.
 
 **Stratégie de conduction retenue** : DCM à faible puissance (diode
 insensible à la technologie à ce régime, le courant revient à zéro
@@ -46,7 +46,7 @@ limité). Seuil analytique (`inductor_sizing.py`, formule boost
 standard — Erickson, *Fundamentals of Power Electronics*) :
 
 $$
-L_{crit}(V_{in}, V_{out}, P_{out}, f_{sw}) = \frac{V_{in}^2\left(1 - \dfrac{V_{in}}{V_{out}}\right)}{2\, f_{sw}\, P_{out}}
+\Large L_{crit}(V_{in}, V_{out}, P_{out}, f_{sw}) = \frac{V_{in}^2\left(1 - \dfrac{V_{in}}{V_{out}}\right)}{2\, f_{sw}\, P_{out}}
 $$
 
 Au-dessus de `L_crit`, CCM ; en dessous, DCM.
