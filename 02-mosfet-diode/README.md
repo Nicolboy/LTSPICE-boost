@@ -315,6 +315,79 @@ pourrait rattraper son déficit de taille par un vrai gain de
 rendement — mais ça demande le modèle plus fin déjà identifié comme
 hors périmètre ici (§9), pas une conclusion à tirer de ces données.
 
+## 8. Sélection de candidats réels (TO-252)
+
+Suite au choix Si+Schottky, recherche de candidats réels pour
+remplacer les pièces génériques de simulation — contraintes : boîtier
+**TO-252**, facilement disponible, performances excellentes.
+Inductance **SER2211 déjà retenue, inchangée**.
+
+**Démarche** : recherche par fabricant (pas par distributeur
+d'abord — le distributeur sert à vérifier la disponibilité une fois
+les candidats identifiés) auprès de fabricants reconnus pour ce
+segment (Infineon, Vishay, onsemi pour le switch ; onsemi, Vishay,
+Diodes Incorporated pour la diode), puis **lecture directe de la fiche
+technique officielle de chaque candidat** (pas d'un résumé de moteur
+de recherche) pour en extraire `Rds(on)`/`Qg`/`tr`/`tf` (switch) ou
+`Vf`/`Cj` (diode) avec leurs conditions de test exactes — même
+discipline que le reste de ce chapitre, aucune valeur retenue sans
+l'avoir lue à la source.
+
+### Switch (N-MOS 100V, TO-252) — trois candidats, vérifiés sur fiche officielle
+
+| | Infineon `IPD050N10N5` | Vishay `SUD70090E` | onsemi `NVD6824NL` |
+|---|---|---|---|
+| `Rds(on)` | 4,3mΩ typ / 5,0mΩ max @10V/40A | 7,4mΩ typ / 8,9mΩ max @10V/20A | 16,5mΩ typ / 20mΩ max @10V/20A |
+| `Qg` total | 51nC @0-10V/40A | 33nC @10V/20A | 66nC @10V/20A |
+| `tr`/`tf` | 7ns / 7ns @50V/40A/RG=1,6Ω | 27ns / 45ns @50V/10A/RG=1Ω | 55ns / 42ns @80V/20A/RG=2,5Ω |
+| `ID` continu | 80A (Tc=25°C) | 50A (limité boîtier) | 41A (Tc=25°C) |
+| Boîtier | P-TO252-3 | TO-252 | DPAK (Case 369C) |
+| Note | Meilleur `Rds(on)` ET fronts les plus rapides des trois | Compromis `Qg`/vitesse intermédiaire | AEC-Q101 ; `Rds(on)` le plus faible gain vs l'incumbent `RD3P04BBKHRB`, mais encore ×1,5 mieux |
+
+Les trois battent l'incumbent `RD3P04BBKHRB` (`Rds(on)` 23mΩ typ/30mΩ
+max) de ×1,5 à ×5,3 — net gain sur la perte de conduction qui domine
+le bilan à ces niveaux de courant (§6.2).
+
+### Diode (Schottky ~100V, TO-252/DPAK) — trois candidats, vérifiés sur fiche officielle
+
+| | onsemi `MBRD5H100T4G` | Vishay `VS-6CWQ10FN-M3` | Diodes Inc `SBR15U100CTL` |
+|---|---|---|---|
+| `Vf` max | 0,71V @5A/25°C (0,60V@125°C) | 0,63V @3A/125°C (0,81V@25°C) | 0,80V @7,5A/25°C (0,65V@125°C) |
+| Configuration | Simple (pin 1 NC) | Double cathode commune, 3,5A/jambe | Double cathode commune |
+| `Cj` | ~150-1000pF (dépend `VR`, graphe) | 92pF @5V | 200pF @4V |
+| Note | Le plus simple à câbler, pas de jambe inutilisée | `Vf` le plus bas au point chaud | Technologie SBR (hybride MOS/Schottky), **avalanche-testée** (`EAS`=192mJ) — tolère un dépassement que la Schottky pure ne tolère pas |
+
+Les trois sont de vraies Schottky (ou assimilées, SBR) — pas de
+recouvrement inverse, même argument que celui qui a fait gagner
+`NTSV20U100CT` en simulation (§6.1).
+
+### Non vérifié à ce stade
+
+Disponibilité/prix réels chez un distributeur (Digikey, Mouser) pas
+encore croisés pour ces six références précises — seulement les
+fiches techniques officielles lues directement. À faire avant de
+figer un choix final.
+
+### Prochaine étape identifiée, pas encore engagée
+
+Risque EMI (`dV/dt`/`dI/dt` des switchs rapides, anneau de résonance
+de la boucle chaude avec les inductances/capacités parasites du PCB
+et des composants eux-mêmes) qui doit encadrer le choix final plus
+que la seule perte. Prévu, pas encore fait dans cette passe :
+- Estimation des pertes par effet Joule (`Rds(on)`×`Irms²`) et de
+  commutation (`Eon`/`Eoff` via `Qg`/`tr`/`tf`) des 3 candidats switch
+  à leur vitesse native (pas ralentie), pour trancher le compromis
+  rapidité/EMI vs perte.
+- Identification et estimation des éléments parasites réels de la
+  boucle chaude (inductance de piste/boîtier, capacité `Coss`/`Cj`
+  des candidats) pour situer la fréquence et l'amplitude de résonance
+  attendue — pas supposée, à calculer depuis les composants retenus
+  et une revue du placement.
+- Question ouverte, non tranchée : les outils actuels (LTspice +
+  scripts Python de ce chapitre) suffisent-ils à une estimation CEM
+  conduite, ou faut-il un outil dédié (ex. QSPICE). À statuer avant de
+  lancer cette passe, pas en cours de route.
+
 ## 9. Ce qui reste ouvert / différé
 
 - **Verdict switch (Si vs GaN) non tranché, pas négatif** — le `dtmax`
