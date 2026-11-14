@@ -452,12 +452,11 @@ candidats sont largement surdimensionnés en courant pour cette
 application. La rapidité de l'`IPD050N10N5` ne coûte donc pas
 significativement en pertes absolues.
 
-> **⚠ Ce calcul à la main s'est révélé trompeur, voir plus bas.**
-> Vérifié ensuite en SPICE complet, le classement des 3 switchs
-> s'inverse presque totalement : `NVD6824NL`, le pire ici, est en
-> réalité le moins dissipatif des 3 dans le circuit réel. Chiffres
-> gardés tels quels (décomposition qualitative toujours valable), mais
-> **ne pas les lire comme une prédiction fiable de perte totale**.
+> **⚠ Ce calcul ignore la perte de `Coss` — trompeur, voir plus bas.**
+> Vérifié en SPICE complet, le classement des 3 switchs s'inverse :
+> `NVD6824NL`, le pire ici, est en réalité le moins dissipatif des 3 —
+> la perte dominante vient de `Coss` (déchargé dans le canal à chaque
+> amorçage), pas de `Qgd` comme supposé ici.
 
 ### Boucle chaude : estimation par placement (pré-routage)
 
@@ -544,12 +543,30 @@ fixée) :
 
 **Le classement s'inverse presque totalement entre l'estimation à la
 main et la simulation réelle.** Confirmé à deux résolutions temporelles
-(`dtmax`=1ns et 0,2ns, écart <3%) : `NVD6824NL`, le candidat au plus
-mauvais `Rds(on)` ET à la pire estimation à la main, est en réalité
-**le switch le moins dissipatif des 3 dans ce circuit** (quasi 2x moins
-que `SUD70090E`). Cause précise non élucidée (interaction entre `Coss`
-externe, self parasite et modèle de grille simplifié) — documentée
-telle quelle, pas expliquée plus avant ici.
+(`dtmax`=1ns et 0,2ns, écart <3%) : `NVD6824NL`, le pire sur
+`Rds(on)`, est en réalité **le switch le moins dissipatif des 3**
+(quasi 2x moins que `SUD70090E`).
+
+**Cause : la perte vient de `Rds(on)` ET de `Coss`, pas de `Qgd` comme
+le supposait le calcul à la main.** `Coss` est une capacité non
+linéaire (elle décroît quand `VDS` augmente) ; à chaque amorçage,
+l'énergie qu'elle a accumulée se décharge dans le canal du switch —
+perte standard, intégrale de `C(V)` sur la charge/décharge réelle,
+approximée ici par $P_{Coss} \approx \tfrac{1}{2} C_{oss} V_{ds}^2
+f_{sw}$ :
+
+| Switch | `Coss` | `P_{Coss}` calculé | Mesuré SPICE | Reste (conduction + recouvrement) |
+|---|---|---|---|---|
+| `IPD050N10N5` | 560pF | 354,5mW | 497,5mW | 143,0mW |
+| `SUD70090E` | 845pF | 537,6mW | 743,6mW | 206,0mW |
+| `NVD6824NL` | 187pF | 117,6mW | 279,7mW | 162,1mW |
+
+Le reste (conduction + recouvrement) est similaire pour les 3
+(143-206mW) — c'est `P_{Coss}`, qui varie de 118 à 538mW selon le
+`Coss` de chaque candidat, qui explique l'écart entre eux. `NVD6824NL`
+a le `Coss` le plus petit des 3 (187pF, lu à `VDS`=25V — probablement
+encore plus bas au point réel ~80V) : d'où sa victoire malgré son
+`Rds(on)` le plus mauvais.
 
 **Diode, vérifiée avec le switch retenu, mêmes deux résolutions** :
 
