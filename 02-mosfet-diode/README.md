@@ -151,7 +151,7 @@ schéma DCM ci-dessus. **Les verdicts ci-dessous utilisent uniquement les
 | η moyen (nominal, toutes L/fsw/P convergées) | **98,76%** | 97,998% | **98,76%** | 97,98% |
 
 Écart ~0,78 point d'efficacité, **quel que soit le switch** — cohérent
-avec le test de fumée (§5) : le courant de recouvrement de l'ultrafast
+avec l'essai à blanc (§5) : le courant de recouvrement de l'ultrafast
 ajoute une perte réelle et mesurable, qui domine largement l'effet du
 choix de switch (ci-dessous). L'écart grandit avec la fréquence (plus de
 commutations par seconde = plus d'événements de recouvrement par
@@ -167,6 +167,8 @@ seconde) :
 cette classe de tension — l'écart s'aggrave avec la fréquence,
 renforçant le choix si une fréquence plus haute que 200kHz était
 envisagée.**
+
+![Pertes de commutation switch et de recouvrement diode vs fréquence](plots/stage1_tech_switching_loss.png)
 
 ### 6.2 Switch : Si et GaN quasiment indiscernables dans ce modèle simple
 
@@ -215,6 +217,8 @@ recouvrement diode. **L'hypothèse de départ (200kHz) reste confirmée,
 avec une justification plus complète qu'au chapitre 1** (qui ne pouvait
 pas encore voir ce compromis).
 
+![Rendement vs fréquence, 4 combinaisons switch/diode](plots/stage1_tech_efficiency.png)
+
 ### 6.4 Inductance : le choix du chapitre 1 n'est pas remis en cause
 
 Les valeurs plus petites (12/27µH) souffrent d'un défaut de convergence
@@ -233,7 +237,7 @@ d'inductance déjà validé au chapitre 1.
 |---|---|---|
 | Moyenne (toutes configs) | 3,32V | 3,69V |
 
-Confirme la tendance du test de fumée (§5) : l'ultrafast a un
+Confirme la tendance de l'essai à blanc (§5) : l'ultrafast a un
 dépassement un peu plus élevé, mais l'écart (~0,4V) reste modeste
 devant l'anneau de base déjà présent sans recouvrement — **le signal
 décisif reste la perte, pas le pic de tension** (§6.1).
@@ -591,7 +595,7 @@ Simulation LTspice (mode batch), pilotée en Python — voir
 commentaires de chaque script pour le chemin de l'exécutable LTspice à
 adapter.
 
-- Test fumée (un point) : `python find_duty2.py 20 80 40 200000 47e-6 8.95e-3 Si Schottky`
+- Essai à blanc (un point) : `python find_duty2.py 20 80 40 200000 47e-6 8.95e-3 Si Schottky`
 - Balayage complet (240 points, ~80 minutes) : `python run_sweep_tech.py`
 - Graphiques : `python make_plots_tech.py`
 

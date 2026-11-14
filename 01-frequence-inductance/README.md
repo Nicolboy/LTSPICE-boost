@@ -124,6 +124,8 @@ chapitre suivant).
 *mode DCM à 100kHz sur ce coin — rendement non comparable terme à
 terme au même sens qu'en CCM.
 
+![Rendement et courant crête vs fréquence](plots/stage1_freq_comparison.png)
+
 **Le rendement ne varie quasiment pas avec la fréquence** (98,6-99,5%
 partout) — attendu et sans surprise : avec switch/diode idéaux, la
 perte dominante est la chute directe de la diode (quasi
@@ -149,6 +151,8 @@ un boost 100% idéal sans parasite modélisé. Pas de clamp nécessaire à
 ce stade : cette comparaison n'aura de sens qu'avec un vrai modèle de
 diode à recouvrement inverse (chapitre 2).
 
+![Tension au nœud de commutation (Vds_switch) selon la fréquence](plots/stage1_vds_hotnode.png)
+
 ## 8. Comparaison de valeurs d'inductance
 
 Question posée après coup : le choix de `L=47µH` a été validé *lui-même*
@@ -167,7 +171,15 @@ par pièce) : point nominal (20V→80V) aux 4 puissances + vérification
 CCM au coin le plus dur (24V→100V) à 40W. DCR/Isat/Irms sourcés des
 fiches constructeur respectives (Coilcraft, doc 1084-1 pour SER2211,
 1111-1 pour MSS1583, 1755-1 pour MSS1514V). Répétée aux 4 fréquences
-candidates. Figures : `plots/stage1_Lcompare_{100,200,300,400}khz.png`.
+candidates.
+
+| 100kHz | 200kHz |
+|---|---|
+| ![](plots/stage1_Lcompare_100khz.png) | ![](plots/stage1_Lcompare_200khz.png) |
+
+| 300kHz | 400kHz |
+|---|---|
+| ![](plots/stage1_Lcompare_300khz.png) | ![](plots/stage1_Lcompare_400khz.png) |
 
 **Le verdict tient aux 4 fréquences, pas seulement à 200kHz** — SER2211-473
 reste au-dessus du nuage MSS1583/MSS1514V sur les trois critères

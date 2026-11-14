@@ -88,7 +88,7 @@ DIODES = {
         part="STTH2002",
         vf_target=1.1, i_test=20.0,    # max, IF=20A, Tj=25degC (pas de typ a ce point)
         # trr typ datasheet (p.3 tbl.4, IF=1A/dIF/dt=-200A/us/VR=30V/Tj=25degC)
-        # -- POINT DE DEPART pour TT, confirme au test fumee (voir README
+        # -- POINT DE DEPART pour TT, confirme a l'essai a blanc (voir README
         # ch.2 Sec4/5 : le recouvrement simule depend aussi du di/dt reel
         # au point de fonctionnement, pas juste de TT seul).
         tt_s=16e-9,

@@ -212,7 +212,7 @@ def build(point_name, vin, vout_target, pout, d, period, out_path,
     # et le recouvrement diode (TT~16ns) sont plus courts que le pas du
     # chapitre 1 -- un pas trop grossier sous-echantillonne ces
     # transitoires et masque le depassement de tension au lieu de le
-    # simuler (constate lors du premier test fumee de ce chapitre, avec
+    # simuler (constate lors du premier essai a blanc de ce chapitre, avec
     # dtmax=10n herite du ch.1 : overshoot quasi identique Schottky vs
     # ultrafast alors que les pertes mesurees, elles, divergeaient
     # nettement). 1ns = compromis (~13 points/anneau), PAS 0,1-0,2ns
