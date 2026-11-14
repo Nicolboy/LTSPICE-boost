@@ -1,4 +1,4 @@
-"""Chapitre 2 -- balaye la grille allegee : 4 combinaisons
+"""Chapitre 2 -- balaye la grille allegee (voir README de ce chapitre) : 4 combinaisons
 switch x diode, 4 frequences, 3 valeurs L (SER2211, meme boitier gagnant
 du chapitre 1), grille electrique allegee (point nominal 20V->80V aux 4
 puissances + coin le plus dur 24V->100V a 40W seulement) = 4x4x3x5 = 240
@@ -19,7 +19,7 @@ FREQS_HZ = [100e3, 200e3, 300e3, 400e3]
 
 # SER2211 -- 3 valeurs, Coilcraft doc 1084-1 (meme feuille que le ch.1,
 # DCR typ) -- PAS de melange de famille (verdict ch.1 : SER2211 domine
-# MSS1583/MSS1514V a L egale).
+# MSS1583/MSS1514V a L egale, voir chapitre 1).
 L_CANDIDATES = [
     ("SER2211-123MED", 12.0e-6, 3.15e-3),
     ("SER2211-273MED", 27.0e-6, 6.84e-3),

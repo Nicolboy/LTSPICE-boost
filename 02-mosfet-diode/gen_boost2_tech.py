@@ -18,7 +18,7 @@ incrementale inchangee) par rapport au chapitre 1 :
 
 Inductance : meme principe qu'au chapitre 1 (valeur/DCR en parametre),
 mais balayee sur 3 valeurs SER2211 (12/27/47uH) au lieu d'etre fixee a
-47uH -- voir run_sweep_tech.py.
+47uH -- voir README de ce chapitre.
 
 Topologie (boost non synchrone, inchangee) :
   Vin -- Cin(ideal) -- L(reel, DCR serie) -- n_pre_stray -- Lstray(estimee)

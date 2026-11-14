@@ -253,6 +253,18 @@ décisif reste la perte, pas le pic de tension** (§6.1).
   point isolé (300kHz/47µH/coin le plus dur/40W) a aussi échoué sans ce
   schéma — anomalie de recherche, à reprendre si ce point précis
   redevient pertinent.
+- **Décomposition conduction/recouvrement diode bruitée** — le graphique
+  `plots/stage1_tech_switching_loss.png` (colonne de droite) montre un
+  `Ploss_diode_recovery_est` NON NUL même pour la Schottky (`TT=0`,
+  structurellement sans recouvrement). Ce n'est pas un recouvrement réel :
+  l'estimateur de perte de conduction (`Vf` statique évalué à `Iout_avg`
+  constant) est un point unique sur une courbe non-linéaire, alors que le
+  courant réel dans la diode est triangulaire — l'écart résiduel se
+  retrouve classé "recouvrement" par soustraction, même quand il n'y en a
+  pas. **Les verdicts du §6.1 n'utilisent PAS cette décomposition** (ils
+  comparent le rendement global, mesuré directement) — seul ce graphique
+  supplémentaire en hérite, à lire comme qualitatif (ordre de grandeur,
+  tendance) plutôt que quantitatif.
 - **Point de test `trr` de l'ultrafast à faible courant** — le `trr`
   datasheet (16ns) est mesuré à un courant bien plus faible que le
   courant nominal du composant ou le point de fonctionnement réel de ce

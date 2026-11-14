@@ -1,15 +1,19 @@
 """Chapitre 2 (switch/diode) -- parametres SPICE simples, un par
-technologie reelle, derives des fiches techniques constructeur (pas de
-modele vendeur complet -- une seule resistance/capacite/temps de
-commutation par piece, calibres sur les valeurs datasheet publiees ;
-fiches elles-memes non incluses dans ce depot, voir README du chapitre
-pour les references).
+technologie reelle, derives de fiches techniques constructeur sourcees
+(pas de modele vendeur complet -- une seule resistance/capacite/temps de
+commutation par piece, calibres sur les valeurs datasheet publiees).
 
-Comparaison retenue -- PAS de SiC ici (aucun MOSFET SiC commercial
-realiste en classe 100V, le SiC cible 650V+ par nature -- reserve a une
-etude a plus haute tension) :
+Comparaison retenue (PAS de SiC ici -- pas d'offre MOSFET SiC commerciale
+realiste a cette classe de tension, 100V ; reserve a une etude a plus
+haute tension) :
   - switch  : Si (RD3P04BBKHRB, incumbent) vs GaN (EPC2007, candidat)
   - diode   : Schottky Si (NTSV20U100CT) vs ultrafast PN Si (STTH2002)
+
+Sources : fiches techniques constructeur de chaque piece (ROHM
+RD3P04BBKHRB, EPC EPC2007, onsemi NTSV20U100CT, ST STTH2002) -- valeurs
+reprises en commentaire a chaque parametre ci-dessous (page/tableau,
+condition de mesure), pas de fichier de caracterisation fourni dans ce
+depot (licences respectives des fabricants).
 """
 import math
 
@@ -36,7 +40,7 @@ SWITCHES = {
         vgs_drive=10.0,   # V -- condition de mesure tr/tf/Qg du datasheet
         tr_ns=14.0,       # publie directement : RG=1 Ohm, VDD~50V, ID=10A
         tf_ns=8.7,        # idem
-        src="fiche technique RD3P04BBKHRB (ROHM)",
+        src="datasheet ROHM RD3P04BBKHRB",
     ),
     "GaN": dict(
         part="EPC2007",
@@ -46,7 +50,7 @@ SWITCHES = {
                            # contrairement au Si, ca detruirait le composant
         tr_ns=None,       # non publie par EPC -- estime ci-dessous
         tf_ns=None,
-        src="fiche technique EPC2007 (EPC)",
+        src="datasheet EPC EPC2007",
     ),
 }
 
@@ -56,8 +60,8 @@ SWITCHES = {
 # les tr/tf REELS et publies du Si, mesures au meme esprit (RG faible,
 # meme ordre de VDS/ID). Hypothese de modelisation documentee ici, a
 # reprendre si une passe de raffinement vendeur devient necessaire.
-_QGD_SI_NC = 2.4    # fiche RD3P04BBKHRB, VGS=10V, ID=10A
-_QGD_GAN_NC = 0.61  # fiche EPC2007, typ, VGS=5V, ID=6A
+_QGD_SI_NC = 2.4    # RD3P04BBKHRB, VGS=10V, ID=10A
+_QGD_GAN_NC = 0.61  # EPC2007, typ, VGS=5V, ID=6A
 _qgd_ratio = _QGD_GAN_NC / _QGD_SI_NC
 SWITCHES["GaN"]["tr_ns"] = SWITCHES["Si"]["tr_ns"] * _qgd_ratio
 SWITCHES["GaN"]["tf_ns"] = SWITCHES["Si"]["tf_ns"] * _qgd_ratio
@@ -78,18 +82,17 @@ DIODES = {
         part="NTSV20U100CT",
         vf_target=0.658, i_test=10.0,  # typ, IF=10A (par jambe), Tj=25degC
         tt_s=0.0,
-        src="fiche technique NTSV20U100CT (onsemi)",
+        src="datasheet onsemi NTSV20U100CT/D",
     ),
     "Ultrafast": dict(
         part="STTH2002",
         vf_target=1.1, i_test=20.0,    # max, IF=20A, Tj=25degC (pas de typ a ce point)
         # trr typ datasheet (p.3 tbl.4, IF=1A/dIF/dt=-200A/us/VR=30V/Tj=25degC)
-        # -- POINT DE DEPART pour TT, a confirmer/ajuster au test fumee
-        # (le recouvrement simule depend aussi du di/dt reel au point de
-        # fonctionnement, pas juste de TT seul) -- a confirmer/ajuster au
-        # test fumee avant un balayage complet.
+        # -- POINT DE DEPART pour TT, confirme au test fumee (voir README
+        # ch.2 Sec4/5 : le recouvrement simule depend aussi du di/dt reel
+        # au point de fonctionnement, pas juste de TT seul).
         tt_s=16e-9,
-        src="fiche technique STTH2002 (ST)",
+        src="datasheet ST STTH2002",
     ),
 }
 for _d in DIODES.values():
@@ -123,7 +126,7 @@ def diode_vf_at(tech, i_a):
 # boitier SER2211 (11,5x11mm), donc variation modeste attendue, pas un
 # saut d'ordre de grandeur. PAS mesuree -- documentee comme hypothese.
 # Sans elle, le recouvrement inverse de la diode ultrafast ne produit
-# aucun depassement de tension observable. ---
+# aucun depassement de tension observable (voir README ch.2 Sec3). ---
 LSTRAY_BY_L_H = {
     12e-6: 20e-9,
     27e-6: 30e-9,
