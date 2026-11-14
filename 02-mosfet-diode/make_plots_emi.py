@@ -16,26 +16,32 @@ SWITCH_COLOR = {"IPD050N10N5": "C0", "SUD70090E": "C1", "NVD6824NL": "C2"}
 
 
 def make_switch_losses_figure(out="plots/emi_switch_losses.png"):
+    """Un sous-graphe par transistor -- 3 courbes (P_cond/P_sw/P_total)
+    en fonction de fsw, pas un empilement -- pour voir directement
+    lequel des deux termes domine et comment la somme evolue."""
     points = load_nominal_points()
     fsw_list = [p["fsw_khz"] for p in points]
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
     for ax, sw_name in zip(axes, REAL_SWITCHES):
         p_cond = [estimate(sw_name, p)["p_cond"] * 1e3 for p in points]
         p_sw = [estimate(sw_name, p)["p_sw"] * 1e3 for p in points]
-        x = range(len(fsw_list))
-        ax.bar(x, p_cond, label="P_cond", color=SWITCH_COLOR[sw_name],
-               alpha=0.5)
-        ax.bar(x, p_sw, bottom=p_cond, label="P_sw",
-               color=SWITCH_COLOR[sw_name], alpha=1.0)
-        ax.set_xticks(list(x))
+        p_total = [c + s for c, s in zip(p_cond, p_sw)]
+        ax.plot(fsw_list, p_cond, marker="o", label="P_cond",
+                color=SWITCH_COLOR[sw_name], ls="--")
+        ax.plot(fsw_list, p_sw, marker="s", label="P_sw",
+                color=SWITCH_COLOR[sw_name], ls=":")
+        ax.plot(fsw_list, p_total, marker="^", label="P_total",
+                color=SWITCH_COLOR[sw_name], ls="-", lw=2)
+        ax.set_xticks(fsw_list)
         ax.set_xticklabels([f"{f:.0f}k" for f in fsw_list])
         ax.set_title(sw_name)
         ax.set_xlabel("fsw (Hz)")
+        ax.grid(alpha=0.3)
         if ax is axes[0]:
             ax.set_ylabel("Pertes switch (mW)")
-            ax.legend(fontsize=8)
-    fig.suptitle("Pertes switch a vitesse native -- conduction vs "
-                  "commutation (20V->80V/40W, L=47uH)")
+        ax.legend(fontsize=8)
+    fig.suptitle("Pertes switch a vitesse native -- conduction, "
+                  "commutation et somme (20V->80V/40W, L=47uH)")
     fig.tight_layout()
     fig.savefig(out, dpi=130)
     print(f"Ecrit {out}")
@@ -54,6 +60,7 @@ def make_resonance_figure(rows, out="plots/emi_resonance_overshoot.png"):
     ax.axhline(80, color="k", ls=":", lw=1, label="Vout_avg nominal")
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=7)
+    ax.set_ylim(75, 125)
     ax.set_ylabel("Tension (V)")
     ax.set_title("Dépassement de tension switch : calcul (borne sup.) "
                   "vs simulation, 9 combinaisons")
