@@ -253,18 +253,37 @@ décisif reste la perte, pas le pic de tension** (§6.1).
   point isolé (300kHz/47µH/coin le plus dur/40W) a aussi échoué sans ce
   schéma — anomalie de recherche, à reprendre si ce point précis
   redevient pertinent.
-- **Décomposition conduction/recouvrement diode bruitée** — le graphique
-  `plots/stage1_tech_switching_loss.png` (colonne de droite) montre un
-  `Ploss_diode_recovery_est` NON NUL même pour la Schottky (`TT=0`,
-  structurellement sans recouvrement). Ce n'est pas un recouvrement réel :
-  l'estimateur de perte de conduction (`Vf` statique évalué à `Iout_avg`
-  constant) est un point unique sur une courbe non-linéaire, alors que le
-  courant réel dans la diode est triangulaire — l'écart résiduel se
-  retrouve classé "recouvrement" par soustraction, même quand il n'y en a
-  pas. **Les verdicts du §6.1 n'utilisent PAS cette décomposition** (ils
-  comparent le rendement global, mesuré directement) — seul ce graphique
-  supplémentaire en hérite, à lire comme qualitatif (ordre de grandeur,
-  tendance) plutôt que quantitatif.
+- **Le partage switch/diode de la perte totale est numériquement bruité
+  à `dtmax`=1ns — confirmé par re-simulation, pas juste suspecté.**
+  Repéré en relisant `plots/stage1_tech_switching_loss.png` (colonne de
+  droite, Si+Ultrafast, L=47µH) : `Ploss_diode_recovery_est` zigzague
+  avec la fréquence (0,030/0,074/0,033/0,091W aux 4 fréquences) au lieu
+  d'évoluer progressivement. Diagnostic en deux temps :
+  1. **Ce n'est pas qu'un artefact de la décomposition conduction/
+     recouvrement** (l'estimateur `Vf` statique à `Iout_avg` constant
+     reste une simplification réelle, séparée) — `Ploss_diode_total`,
+     la mesure SPICE **directe**, zigzague déjà elle-même
+     (0,4276/0,4848/0,4359/0,4983W aux 4 fréquences), alors que
+     `Ploss_switch_total` et le rendement, mesurés dans la même fenêtre,
+     restent lisses. Le partage entre les deux intégrales
+     (`Id(M1)*V(n_sw)` et `I(D1)*(V(n_sw)-V(vout))`) est donc instable,
+     pas seulement le post-traitement qui en dérive.
+  2. **Confirmé par re-simulation ciblée** des 4 points (Si+Ultrafast,
+     L=47µH, 100-400kHz) à `dtmax`=0,2ns (5x plus fin) : la série
+     `Ploss_diode_total` devient quasi monotone (0,427/0,445/0,441/
+     0,471W) — le zigzag se résorbe très largement. `Ploss_switch_total`
+     reste lisse aux deux résolutions, mais se décale de -12 à -14% aux
+     deux fréquences les plus basses — un biais réel à `dtmax`=1ns, pas
+     seulement du bruit, mais qui n'affecte pas la forme de la courbe.
+  **Conséquence** : le graphique `stage1_tech_switching_loss.png` (les
+  deux colonnes, pas seulement le recouvrement diode) est à lire comme
+  qualitatif — ordre de grandeur, tendance générale avec la fréquence —
+  pas comme des valeurs absolues fiables. Refaire les 240 points à
+  `dtmax`=0,2ns est impraticable ici (5x le temps déjà mesuré à 1ns, de
+  l'ordre de plusieurs heures) ; non fait dans ce chapitre. **Les
+  verdicts du §6.1/§6.2 restent valables** : ils comparent le rendement,
+  mesuré directement et resté lisse aux deux résolutions testées — pas
+  la décomposition switch/diode.
 - **Point de test `trr` de l'ultrafast à faible courant** — le `trr`
   datasheet (16ns) est mesuré à un courant bien plus faible que le
   courant nominal du composant ou le point de fonctionnement réel de ce
