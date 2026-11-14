@@ -67,7 +67,7 @@ sur les grandeurs publiées (`switch_diode_models.py`) :
   tr≈3,56ns, tf≈2,21ns. **Hypothèse de modélisation documentée dans
   `switch_diode_models.py`, pas une donnée datasheet.**
 - **Diode** : `IS` résolu (pas deviné) pour que le modèle statique
-  (`N·VT·ln(I/IS) + I·RS`) retombe sur le `Vf` datasheet au courant de
+  ($N V_T \ln(I/I_S) + I R_S$) retombe sur le `Vf` datasheet au courant de
   test publié. Schottky : `TT=0` (porteurs majoritaires, pas de
   recouvrement par nature). Ultrafast : `TT=16ns`, calé sur le `trr`
   typique publié (testé à faible courant par le fabricant — voir limites

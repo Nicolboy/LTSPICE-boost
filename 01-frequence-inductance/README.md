@@ -37,7 +37,7 @@ RS=10mΩ`) — aucun des deux n'est un candidat de technologie précis.
 fréquences candidates (100/200/300/400kHz, toutes au-delà du spectre
 audio) = 48 points. Duty cycle résolu par bissection contre le `Vout`
 simulé (`find_duty1.py`), jamais la seule formule idéale CCM
-`D=1-Vin/Vout` — robuste que le point tombe en CCM ou DCM.
+$D = 1 - V_{in}/V_{out}$ — robuste que le point tombe en CCM ou DCM.
 
 **Stratégie de conduction retenue** : DCM à faible puissance (diode
 insensible à la technologie à ce régime, le courant revient à zéro
