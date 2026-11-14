@@ -45,9 +45,9 @@ tout seul), bascule en CCM à forte puissance (courant crête/efficace
 limité). Seuil analytique (`inductor_sizing.py`, formule boost
 standard — Erickson, *Fundamentals of Power Electronics*) :
 
-```
-L_crit(Vin,Vout,Pout,fsw) = Vin² · (1-Vin/Vout) / (2·fsw·Pout)
-```
+$$
+L_{crit}(V_{in}, V_{out}, P_{out}, f_{sw}) = \frac{V_{in}^2\left(1 - \dfrac{V_{in}}{V_{out}}\right)}{2\, f_{sw}\, P_{out}}
+$$
 
 Au-dessus de `L_crit`, CCM ; en dessous, DCM.
 

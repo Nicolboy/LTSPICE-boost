@@ -415,12 +415,15 @@ d'un fabricant à l'autre, piège déjà signalé §6.2), mais recalculés
 depuis `Qgd` et le driver de grille déjà retenu pour cet étage (4A pic
 source / 6A pic puits) :
 
-```
-t_sw_on  = Qgd / I_source     t_sw_off = Qgd / I_sink
-Eon  = 0,5 * Vds * I_valley * t_sw_on
-Eoff = 0,5 * Vds * I_peak   * t_sw_off
-Psw  = (Eon + Eoff) * fsw
-```
+$$
+t_{on} = \frac{Q_{gd}}{I_{source}} \qquad t_{off} = \frac{Q_{gd}}{I_{sink}}
+$$
+
+$$
+E_{on} = \tfrac{1}{2}\, V_{ds}\, I_{valley}\, t_{on} \qquad
+E_{off} = \tfrac{1}{2}\, V_{ds}\, I_{peak}\, t_{off} \qquad
+P_{sw} = (E_{on} + E_{off})\, f_{sw}
+$$
 
 Aucune nouvelle simulation : calculé directement depuis les points
 déjà mesurés au §6 (switch=Si/diode=Schottky générique, 20V→80V/40W,
@@ -464,8 +467,14 @@ boucles de commutation ; un retour soigné au routage viserait plutôt
 
 ### Calcul à la main vs confirmation SPICE
 
-Calcul : `f0 = 1/(2π√(Lboucle×(Coss+Cj)))`,
-`Vpic = Vout + Ipk_L×√(Lboucle/(Coss+Cj))`. Confirmation SPICE : les 9
+Calcul :
+
+$$
+f_0 = \frac{1}{2\pi\sqrt{L_{boucle}\,(C_{oss}+C_j)}} \qquad
+V_{pic} = V_{out} + I_{pk,L}\sqrt{\frac{L_{boucle}}{C_{oss}+C_j}}
+$$
+
+Confirmation SPICE : les 9
 combinaisons switch×diode, point nominal, `Lstray`=52nH (état actuel) :
 
 | Switch | Diode | `f0` calculé | `Vpic` calculé | `Vds` simulé | Écart |
