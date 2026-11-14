@@ -25,7 +25,7 @@ aveugle dans l'un ou l'autre.
 | # | Sujet | État |
 |---|---|---|
 | 1 | [Fréquence de découpage et choix d'inductance](01-frequence-inductance/) | ✅ fait |
-| 2 | Technologie transistor/diode (Si / SiC / GaN) | à venir |
+| 2 | [Technologie switch/diode (Si vs GaN, Schottky vs ultrafast)](02-mosfet-diode/) | ✅ fait |
 | 3 | Condensateurs d'entrée et de sortie | à venir |
 | 4 | Synthèse avec composants réels (bilan final) | à venir |
 
