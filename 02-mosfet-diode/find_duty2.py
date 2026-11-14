@@ -23,7 +23,7 @@ SEARCH_SETTLE_PERIODS = 150
 
 def find_duty(vin, vout_target, pout, fsw, l_henries, dcr_ohm, switch_tech,
               diode_tech, d_lo=0.1, d_hi=0.95, tol=0.01, max_iter=14,
-              settle_periods=None, tmp_out=None):
+              settle_periods=None, tmp_out=None, add_lisn=False):
     r = None
     d = (d_lo + d_hi) / 2
     if tmp_out is None:
@@ -33,7 +33,7 @@ def find_duty(vin, vout_target, pout, fsw, l_henries, dcr_ohm, switch_tech,
         r = run(vin, vout_target, pout, d, fsw, l_henries, dcr_ohm,
                 switch_tech, diode_tech, out=tmp_out,
                 settle_periods=SEARCH_SETTLE_PERIODS,
-                dtmax_s=SEARCH_DTMAX_S)
+                dtmax_s=SEARCH_DTMAX_S, add_lisn=add_lisn)
         vout = r.get("vout_avg")
         if vout is None:
             print(f"  iter {i}: D={d:.4f} -> ECHEC (recherche)")
@@ -52,7 +52,7 @@ def find_duty(vin, vout_target, pout, fsw, l_henries, dcr_ohm, switch_tech,
     # pas celui de la derniere iteration grossiere ci-dessus.
     r_final = run(vin, vout_target, pout, d, fsw, l_henries, dcr_ohm,
                   switch_tech, diode_tech, out=tmp_out,
-                  settle_periods=settle_periods)
+                  settle_periods=settle_periods, add_lisn=add_lisn)
     vout_final = r_final.get("vout_avg")
     if vout_final is not None:
         print(f"  FINAL (precis) : D={d:.4f} -> Vout={vout_final:.4f}V "

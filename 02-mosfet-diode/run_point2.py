@@ -14,13 +14,13 @@ LTSPICE = r"C:/Program Files/ADI/LTspice/LTspice.exe"
 
 def run(vin, vout_target, pout, d, fsw, l_henries, dcr_ohm, switch_tech,
         diode_tech, out="point2.asc", lstray_h=None, settle_periods=None,
-        measure_periods=None, rload=None, dtmax_s=1e-9):
+        measure_periods=None, rload=None, dtmax_s=1e-9, add_lisn=False):
     period = 1 / fsw
     build("point", vin, vout_target, pout, d, period, out,
           l_henries=l_henries, dcr_ohm=dcr_ohm, switch_tech=switch_tech,
           diode_tech=diode_tech, lstray_h=lstray_h, rload=rload,
           settle_periods=settle_periods, measure_periods=measure_periods,
-          dtmax_s=dtmax_s)
+          dtmax_s=dtmax_s, add_lisn=add_lisn)
     subprocess.run([LTSPICE, "-b", out], stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL)
     log_path = out.replace(".asc", ".log")

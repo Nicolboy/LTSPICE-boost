@@ -104,7 +104,8 @@ def two_pin(sheet, symname, x, y, inst, value, net_a, net_b, rot="R0"):
 def build(point_name, vin, vout_target, pout, d, period, out_path,
           l_henries, dcr_ohm, switch_tech, diode_tech, lstray_h=None,
           rload=None, cin=220e-6, cout=0.22e-6,
-          settle_periods=None, measure_periods=None, dtmax_s=1e-9):
+          settle_periods=None, measure_periods=None, dtmax_s=1e-9,
+          add_lisn=False):
     """cout reduit (0,22uF -- 10x plus petit qu'au chapitre 1, meme
     bug/justification que gen_boost1.build : fenetre de simulation trop
     courte face a la constante de temps Cout*Rload a faible puissance).
@@ -153,8 +154,38 @@ def build(point_name, vin, vout_target, pout, d, period, out_path,
     s.directive(40, 580, diode_spice_model(diode_tech, "DTECH"))
 
     # --- Vin + Cin ideal ---
-    two_pin(s, "voltage", 80, 160, "V1", str(vin), "vin", "0")
+    vin_node = "n_src" if add_lisn else "vin"
+    two_pin(s, "voltage", 80, 160, "V1", str(vin), vin_node, "0")
     two_pin(s, "cap", 280, 160, "Cin", f"{cin*1e6:.1f}u", "vin", "0")
+
+    # --- LISN simplifiee (une branche, PAS un reseau CISPR 16-1-2
+    # complet a 2 branches) : separe la source ideale du DUT (le
+    # convertisseur, en aval de "vin") pour mesurer la tension de bruit
+    # conduit sur une impedance connue, comme le ferait un recepteur de
+    # mesure. L_lisn=50uH (valeur standard CISPR), branche mesure
+    # C=0,1uF + R=50Ohm (impedance de mesure), branche basse frequence
+    # R=1k + C=1uF (deleste le continu/BF de la branche de mesure, meme
+    # topologie qu'un LISN V-network standard, cote simple ligne). PAS
+    # de retour/masse separee modelisee (0V = masse commune source/DUT
+    # ici) -- limite documentee, voir README. ---
+    if add_lisn:
+        # R_lisn_esr (1 Ohm) : resistance serie realiste de l'inductance
+        # LISN (DCR bobinage) -- sans elle, le filtre d'entree L_lisn/
+        # Cin=220uF est quasi non amorti (R=0 ideale) et ne retombe pas
+        # en regime periodique etabli dans la fenetre de simulation :
+        # anneau basse frequence (~1,5kHz, L_lisn/Cin) toujours en
+        # transitoire au debut de la fenetre de mesure, Pin_avg/Vds_max
+        # mesures totalement faux (334W, 125V constate a l'implementation,
+        # PAS une anomalie du convertisseur). 1 Ohm = proche de
+        # l'amortissement critique pour L=50uH/C=220uF (R_crit=2*sqrt(L/C)
+        # ~0,95 Ohm) -- valeur realiste pour un bobinage de LISN, pas
+        # arbitraire pour masquer le probleme.
+        two_pin(s, "ind", 160, 780, "L_lisn", "50.00u ic=0", "n_src", "n_lisn_r")
+        two_pin(s, "res", 260, 780, "R_lisn_esr", "1", "n_lisn_r", "vin")
+        two_pin(s, "cap", 360, 780, "C_lisn_meas", "0.1u", "vin", "n_lisn_meas")
+        two_pin(s, "res", 560, 780, "R_lisn_meas", "50", "n_lisn_meas", "0")
+        two_pin(s, "res", 760, 780, "R_lisn_lf", "1k", "vin", "n_lisn_lf")
+        two_pin(s, "cap", 960, 780, "C_lisn_lf", "1u", "n_lisn_lf", "0")
 
     # --- L reelle (serie DCR) : vin -> n_pre_dcr -> Rdcr -> n_pre_stray ---
     two_pin(s, "ind", 480, 60, "L1", f"{l_henries*1e6:.4f}u ic=0", "vin", "n_pre_dcr")

@@ -452,6 +452,13 @@ candidats sont largement surdimensionnés en courant pour cette
 application. La rapidité de l'`IPD050N10N5` ne coûte donc pas
 significativement en pertes absolues.
 
+> **⚠ Ce calcul à la main s'est révélé trompeur, voir plus bas.**
+> Vérifié ensuite en SPICE complet, le classement des 3 switchs
+> s'inverse presque totalement : `NVD6824NL`, le pire ici, est en
+> réalité le moins dissipatif des 3 dans le circuit réel. Chiffres
+> gardés tels quels (décomposition qualitative toujours valable), mais
+> **ne pas les lire comme une prédiction fiable de perte totale**.
+
 ### Boucle chaude : estimation par placement (pré-routage)
 
 Carte déjà placée mais pas encore routée (aucune géométrie de piste
@@ -515,21 +522,126 @@ dépassement insensible à `Lstray` dans cette fourchette.
   le faible dépassement de tension ne dit rien du `dI/dt` réel dans la
   boucle, grandeur pertinente pour le spectre CEM conduit, non mesurée
   ici.
-- Le compromis rapidité/EMI évoqué en préambule **ne se lit pas** dans
-  les pertes (toutes sous 0,3W) ni dans le dépassement de tension
-  (insensible au candidat) pour ce jeu de candidats précis.
+- **Les pertes différencient bien les 3 candidats switch, mais pas
+  dans le sens anticipé** (ni par la datasheet, ni par le calcul à la
+  main — tous les deux démentis par la simulation complète, voir plus
+  bas). Le dépassement de tension, lui, reste insensible au candidat.
+
+### Choix définitif étage 1 — `NVD6824NL` + `VS-6CWQ10FN-M3`
+
+**Avertissement méthodologique d'abord, le résultat en dépend
+directement** : le calcul à la main ci-dessus et le classement
+datasheet (`Rds(on)`/`Qgd`) se sont révélés **tous les deux trompeurs**
+une fois vérifiés par simulation SPICE complète des 3 candidats réels,
+dans le vrai circuit, au point nominal (20V→80V/40W, 200kHz, diode
+fixée) :
+
+| Switch | `Rds(on)` (datasheet) | `P_total` estimé à la main | `Ploss_switch_total` **SPICE** (diode `MBRD5H100T4G`) | η SPICE |
+|---|---|---|---|---|
+| `IPD050N10N5` | 4,3mΩ (meilleur) | 76,3mW (2e) | 497,5mW (2e) | 97,79% |
+| `SUD70090E` | 7,4mΩ (2e) | 70,2mW (meilleur) | **743,6mW (pire)** | 97,27% |
+| `NVD6824NL` | 16,5mΩ (pire) | 164,6mW (pire) | **279,7mW (meilleur)** | **98,35%** |
+
+**Le classement s'inverse presque totalement entre l'estimation à la
+main et la simulation réelle.** Confirmé à deux résolutions temporelles
+(`dtmax`=1ns et 0,2ns, écart <3%) : `NVD6824NL`, le candidat au plus
+mauvais `Rds(on)` ET à la pire estimation à la main, est en réalité
+**le switch le moins dissipatif des 3 dans ce circuit** (quasi 2x moins
+que `SUD70090E`). Cause précise non élucidée (interaction entre `Coss`
+externe, self parasite et modèle de grille simplifié) — documentée
+telle quelle, pas expliquée plus avant ici.
+
+**Diode, vérifiée avec le switch retenu, mêmes deux résolutions** :
+
+| Diode | `Ploss_switch_total` | `Ploss_diode_total` | Total | η |
+|---|---|---|---|---|
+| `MBRD5H100T4G` | 279,7mW | 326,5mW | 606,2mW | 98,35% |
+| `VS-6CWQ10FN-M3` | **215,2mW** | 303,2mW | **518,4mW** | **98,59%** |
+| `SBR15U100CTL` | 224,7mW | 353,1mW | 577,8mW | 98,42% |
+
+**`VS-6CWQ10FN-M3` l'emporte sur la perte totale réelle**, malgré sa
+configuration double cathode commune (câblage des deux anodes en
+parallèle nécessaire, pas un simple câblage).
+
+**Compromis EMI assumé, pas ignoré** : cette combinaison a aussi le
+`f0` calculé **le plus haut des 9** (47,6MHz). Les gabarits CEM
+**conduite** usuels (CISPR 22/32 classe B) couvrent 150kHz-30MHz — à
+47,6MHz, cet anneau tombe **hors de la bande conduite**, plutôt dans
+le registre du rayonné (hors périmètre de cette passe). Les
+combinaisons à `f0` plus bas (22-29MHz) tombent elles plus près de la
+limite haute de la bande conduite — potentiellement plus visibles sur
+un spectre conduit, pas moins. Jugement, pas une mesure — à confirmer
+par le spectre conduit simulé ci-dessous.
+
+**Choix retenu : switch `NVD6824NL`, diode `VS-6CWQ10FN-M3`** — sur la
+base de la perte réelle mesurée en SPICE, pas du classement datasheet
+ni de l'estimation à la main.
+
+### Vérification du choix retenu sur toute la plage de fréquence
+
+Rebalayage aux 4 fréquences candidates avec `NVD6824NL`+`VS-6CWQ10FN-M3` :
+
+| `fsw` | `Vout` | η | `Ploss_switch` | `Ploss_diode` | `Vds_max` |
+|---|---|---|---|---|---|
+| 100kHz | 80,21V | **98,73%** | 145,2mW | 309,7mW | 89,7V |
+| 200kHz | 79,29V | 98,59% | 240,6mW | 302,1mW | 84,4V |
+| 300kHz | 79,99V | 98,41% | 330,8mW | 304,8mW | 83,7V |
+| 400kHz | 80,44V | 98,24% | 393,5mW | 306,3mW | 83,4V |
+
+Tendance propre et monotone — confirme que le choix n'est pas un
+artefact du seul point 200kHz. Rendement supérieur à la comparaison
+générique du §6.3 (98,33% à 200kHz, Si/Schottky générique) :
+**98,59% avec les composants réels retenus**. 200kHz reste la
+fréquence retenue (verdict CCM/DCM du chapitre 1 non remis en cause).
+
+### Spectre CEM conduit estimé (réseau LISN + FFT)
+
+LISN simplifié (une branche, PAS un réseau CISPR 16-1-2 complet à 2
+branches) ajouté dans `gen_boost2_tech.py` (`add_lisn=True`) : sépare
+la source idéale du convertisseur pour mesurer la tension de bruit
+conduit sur une impédance connue (50Ω) — `L_lisn`=50µH, branche mesure
+`C`=0,1µF+`R`=50Ω, branche basse fréquence `R`=1kΩ+`C`=1µF.
+
+**Piège trouvé et corrigé à l'implémentation** : `L_lisn` en série avec
+`Cin`=220µF (déjà présent, valeur non sourcée) forme un filtre LC quasi
+non amorti — la simulation ne retombe pas en régime établi dans la
+fenêtre de mesure (`Pin_avg`/`Vds_switch_max` mesurés complètement
+faux, 334W/125V constatés avant correction). **Corrigé** par une
+résistance série réaliste sur `L_lisn` (1Ω, proche de l'amortissement
+critique pour `L`=50µH/`C`=220µF, valeur de bobinage LISN réaliste).
+
+Spectre obtenu (FFT `numpy` sur `V(n_lisn_meas)`, fenêtrage Hann, point
+nominal 20V→80V/40W, 200kHz, `NVD6824NL`+`VS-6CWQ10FN-M3`) :
+
+![Spectre CEM conduit estimé, comparé à un gabarit CISPR 22/32 classe B illustratif](plots/emi_conducted_spectrum.png)
+
+| Fréquence | Niveau | Repère CISPR B (illustratif) |
+|---|---|---|
+| `fsw`=200kHz (fondamental) | **65,9dBµV** | 56dBµV — **dépasse de ~10dB** |
+| 2·`fsw`=400kHz | 51,9dBµV | 56dBµV — en-dessous |
+| 3·`fsw`=600kHz | 41,0dBµV | 56dBµV — en-dessous |
+| `f0` résonance ≈47,5MHz | négligeable | hors bande conduite (>30MHz) |
+
+**Confirme le raisonnement ci-dessus** : la résonance LC ne laisse
+aucune trace visible dans la bande conduite usuelle (150kHz-30MHz).
+**Nouveau constat** : c'est le fondamental de découpage lui-même
+(200kHz) qui dépasse le gabarit illustratif, pas l'anneau de résonance
+— si un filtrage CEM conduit est nécessaire, c'est ce fondamental
+qu'il faudrait atténuer.
+
+**Limites explicites** : LISN simplifié (pas conforme CISPR 16-1-2),
+gabarit CISPR 22/32 classe B choisi par commodité (mains AC, pas
+nécessairement applicable à une alimentation DC), aucun filtre
+d'entrée modélisé, pas une mesure certifiée.
 
 ### Ce qui reste ouvert sur ce point
 
-- **Spectre CEM conduit** (réseau LISN + FFT) — pas fait dans cette
-  passe : le faible dépassement de tension trouvé rendait la
-  justification moins pressante dans l'immédiat.
 - **Estimation de boucle pré-routage** — fourchette de littérature,
   à revérifier une fois la boucle réellement routée.
 - **`Coss` du `NVD6824NL`** lu à `VDS`=25V (pas 50-80V comme les 2
   autres candidats) — probablement surestimé au point réel, sans
-  autre donnée publiée pour corriger. N'affecte pas le verdict (ce
-  candidat n'est de toute façon pas le switch recommandé au §8).
+  autre donnée publiée pour corriger. N'a pas empêché ce candidat de
+  l'emporter sur la perte réelle mesurée (ci-dessus).
 - **Extraction de la période d'oscillation depuis la forme d'onde** —
   abandonnée après une anomalie d'outillage sans rapport avec les
   résultats ; la comparaison `Vpic`/`Vds_switch_max` reste la
