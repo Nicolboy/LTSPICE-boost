@@ -238,6 +238,83 @@ dépassement un peu plus élevé, mais l'écart (~0,4V) reste modeste
 devant l'anneau de base déjà présent sans recouvrement — **le signal
 décisif reste la perte, pas le pic de tension** (§6.1).
 
+## 7. Synthèse — quelle combinaison retenir
+
+Intègre rendement, taille, EMI, souplesse et stabilité — pas seulement
+le rendement isolé des §6.1-6.2.
+
+### Diode : Schottky (`NTSV20U100CT`), les 4 critères convergent
+
+| Critère | Schottky | Ultrafast |
+|---|---|---|
+| Rendement | 98,76% moyen | 97,998% moyen (écart croissant avec fsw : 0,53pt à 100kHz → 2,51pt à 400kHz) |
+| EMI (proxy `Vds_overshoot`) | 3,32V moyen | 3,69V moyen |
+| Souplesse | Pas de recouvrement par nature (`TT=0`), indépendant du `di/dt` réel | `trr` daté à faible courant (1A), pas au point de fonctionnement réel (§9) |
+| Stabilité | Résultats lisses à toutes fréquences/L testées | Partage switch/diode numériquement instable (zigzag confirmé §9, pas un artefact de lecture) |
+
+Aucun des quatre critères ne penche pour l'ultrafast à cette classe de
+tension.
+
+### Switch : rester sur Si (`RD3P04BBKHRB`) — pas un verdict contre le GaN
+
+| Critère | Si | GaN |
+|---|---|---|
+| Rendement | Indiscernable du GaN ici (écart <0,02pt) — **non tranché**, pas une égalité prouvée (§6.2, limite de `dtmax`) |
+| Taille | TO-252 | Puce nue/CSP — réellement plus petit, avantage non quantifié ici mais physiquement acquis (datasheet EPC2007 p.1) |
+| EMI | Fronts 14/8,7ns (publiés) | Fronts ~4x plus rapides (estimés, §3) — *a priori* plus de contenu harmonique HF |
+| Souplesse de commande | `VGS` jusqu'à 10V | `VGS` abs. max **6V** (datasheet) — marge de commande plus étroite |
+
+Le rendement ne départage pas, et les deux critères qui restent (EMI,
+souplesse de commande) penchent plutôt pour le Si à ce stade. **Pas une
+conclusion contre le GaN** — juste pas de raison de migrer sans un
+modèle plus fin qui montrerait un vrai gain de rendement à haute
+fréquence (précisément là où l'avantage GaN est censé apparaître, et
+précisément ce que ce modèle ne peut pas trancher — §9).
+
+### Fréquence : 200kHz confirmé, cinq critères à l'appui
+
+| | 100kHz | 200kHz | 300kHz | 400kHz |
+|---|---|---|---|---|
+| Rendement moyen (4 combinaisons) | 98,49% | 98,33% | 98,00% | 97,55% |
+| Mode au coin dur (24V→100V/40W, L=47µH) | **DCM** ⚠ | CCM | CCM* | CCM |
+| Marge Isat (L=47µH, 40W nominal) | ×1,46 | ×1,87 | ×2,03 | ×2,10 |
+| Marge Irms (L=47µH, 40W nominal) | ×4,85 | ×5,20 | ×5,14 | ×5,06 |
+| `Vds_overshoot` moyen, proxy EMI (toutes configs) | **6,55V** | 3,25V | 2,31V | 1,90V |
+| Écart Schottky/Ultrafast (sensibilité au choix diode) | 0,53pt | 1,25pt | 1,86pt | **2,51pt** |
+
+*300kHz au coin dur : point non convergé (§9, `D`=0,625 au lieu de
+~0,76 attendu, `Vout` mesuré 64,19V) — CCM prédit et cohérent partout
+ailleurs, non confirmé numériquement à ce point précis.
+
+**100kHz** a le meilleur rendement mais échoue le critère de souplesse
+le plus dur (reste en DCM au coin le plus exigeant — la stratégie
+DCM-léger/CCM-fort du chapitre 1 n'est pas tenue partout) et a le pire
+EMI mesuré ici (overshoot 2 à 3x plus élevé qu'aux autres fréquences).
+**Écarté**, comme au chapitre 1.
+
+**400kHz** a la meilleure marge Isat et le meilleur EMI, mais le pire
+rendement et surtout la plus forte sensibilité au choix de diode
+(2,51pt) — elle amplifie l'enjeu d'un mauvais choix plutôt que de le
+tolérer. Candidate seulement si la compacité devient une contrainte
+dure.
+
+**200kHz reste le meilleur compromis** : rendement proche du maximum
+(-0,16pt vs 100kHz), CCM atteint sur les 3 coins, EMI déjà très réduit
+par rapport à 100kHz, marge thermique confortable, et sensibilité
+modérée au choix de diode (1,25pt).
+
+### Recommandation
+
+**200kHz, Si+Schottky, L=47µH (SER2211-473)** — la combinaison déjà
+retenue après les deux chapitres. Rien dans cette synthèse ne la remet
+en cause ; chaque critère nouvellement intégré (EMI, souplesse,
+stabilité) converge vers elle plutôt que de l'affaiblir.
+
+**Seule porte ouverte** : un GaN à fréquence plus haute (300-400kHz)
+pourrait rattraper son déficit de taille par un vrai gain de
+rendement — mais ça demande le modèle plus fin déjà identifié comme
+hors périmètre ici (§9), pas une conclusion à tirer de ces données.
+
 ## 9. Ce qui reste ouvert / différé
 
 - **Verdict switch (Si vs GaN) non tranché, pas négatif** — le `dtmax`
