@@ -65,11 +65,20 @@ GRAPH_TABLE = {
     "Si": dict(
         tech="Si", part="RD3P04BBKHRB", boitier="TO-252 (DPAK)",
         rds_ohm=0.030, rds_hot_ohm=0.056, qg_c=9.1e-9, vgs=10.0, qgd_c=2.4e-9,
+        # Courbe RELUE par la seconde passe, calibree au pixel a 900 dpi
+        # (residu <= 0.16 % sur les decades des deux axes). La premiere
+        # lecture, a l'oeil, s'en ecartait de -8 a +10 % selon le point,
+        # SANS biais systematique -- d'ou un effet de seulement +2.4 % sur
+        # Eoss, dans la tolerance annoncee. Contrairement au FDT86113LZ,
+        # l'axe Y de cette figure est correctement etiquete (1/10/100/1000),
+        # ce qui explique que l'erreur y soit restee faible.
+        # Recoupement courbe/tableau a 50 V : +0.2 / +1.3 / +0.9 % sur
+        # Ciss / Coss / Crss, dispersés et non d'un facteur commun.
         v=np.array([0.01, 0.1, 1, 2, 5, 10, 20, 30, 40, 50, 60, 80, 100], float),
-        coss=np.array([700, 690, 640, 600, 500, 400, 330, 280, 200, 115, 90, 80, 75]) * 1e-12,
-        crss=np.array([135, 133, 110, 95, 70, 50, 35, 25, 15, 9, 8.5, 7.5, 7]) * 1e-12,
-        #                                            ^^^       ^ ancres TABLE p.3
-        eoss_tol=0.10,   # test de sensibilite, voir SI_EOSS_TOL
+        coss=np.array([693, 674, 592, 552, 486, 428, 349, 281, 185, 117, 99.2, 83.2, 73.7]) * 1e-12,
+        crss=np.array([145, 140, 119, 107, 86.9, 67.1, 42.3, 25.8, 12.8, 9.08, 8.38, 7.60, 7.06]) * 1e-12,
+        #                                                   ^^^^ table p.3 : 9 pF
+        eoss_tol=0.05,   # seconde passe : +/-1.3 % zones plates, +/-5 % dans le coude
         src="datasheet ROHM RD3P04BBKHRB rev.005 p.3 (tbl) / p.9 Fig.17 (courbe)",
     ),
     # Si en PETIT boitier : meme classe de tension, puce ~3x plus petite.
@@ -145,7 +154,7 @@ SI_EOSS_TOL = 0.10
 # Portee : ce controle vaut comme validation d'ORDRE DE GRANDEUR, pas comme
 # validation serree. Il ne remet pas en cause Eoss, qui est une grandeur
 # d'etat BLOQUE -- donc lue dans la bonne condition. La garantie sur Eoss
-# vient du test de sensibilite (+/-10 % ci-dessus), pas de ce controle.
+# vient du test de sensibilite, pas de ce controle.
 SI_QGD_INTEGRE_NC = 1.82
 SI_QGD_TABLE_NC = 2.40
 

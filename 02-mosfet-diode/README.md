@@ -806,7 +806,7 @@ $E_{oss}$ seule, ni $R_{ds}$ seul.
 
 | pièce | boîtier | Rds | $E_{oss}$(80V) | **FOM** |
 |---|---|---|---|---|
-| ROHM RD3P04BBKHRB | TO-252 | 30 mΩ | 476 nJ | 14,3 |
+| ROHM RD3P04BBKHRB | TO-252 | 30 mΩ | 487 nJ | 14,6 |
 | onsemi FDT86113LZ | **SOT-223** | 75 mΩ | 176 nJ | 13,2 |
 | Infineon BSC070N10NS5 | SuperSO8 | 7 mΩ | 1168 nJ | **8,2** |
 | EPC2007C (GaN) | BGA | 30 mΩ | 361 nJ | 10,8 |
@@ -833,12 +833,12 @@ Rendement à 40 W, diode Schottky :
 
 | fsw | L | Si TO-252 | **Si SOT-223** | Si SuperSO8 | GaN EPC2007C | GaN EPC2052 |
 |---|---|---|---|---|---|---|
-| 200 kHz | 47 µH | 98,73 | 98,54 | 98,46 | **98,82** | 98,81 |
-| 300 kHz | 33 µH | 98,59 | 98,49 | 98,11 | **98,73** | 98,65 |
-| 400 kHz | 27 µH | 98,47 | **98,47** ← croisement | 97,78 | **98,67** | 98,52 |
-| 500 kHz | 27 µH | 98,34 | 98,43 | 97,43 | **98,58** | 98,36 |
-| 600 kHz | 12 µH | 98,22 | 98,36 | 97,11 | **98,50** | 98,23 |
-| 800 kHz | 12 µH | 97,95 | **98,28** | 96,42 | **98,34** | 97,92 |
+| 200 kHz | 47 µH | 98,72 | 98,54 | 98,46 | **98,82** | 98,81 |
+| 300 kHz | 33 µH | 98,58 | 98,49 | 98,11 | **98,73** | 98,65 |
+| 400 kHz | 27 µH | 98,46 | **98,47** ← croisement | 97,78 | **98,67** | 98,52 |
+| 500 kHz | 27 µH | 98,33 | 98,43 | 97,43 | **98,58** | 98,36 |
+| 600 kHz | 12 µH | 98,20 | 98,36 | 97,11 | **98,50** | 98,23 |
+| 800 kHz | 12 µH | 97,93 | **98,28** | 96,42 | **98,34** | 97,92 |
 
 **Le croisement SOT-223 / TO-252 tombe à 400 kHz** (370 kHz prédits
 analytiquement). Et à 800 kHz, un **SOT-223 en silicium ordinaire arrive
@@ -848,7 +848,7 @@ Décomposition à 800 kHz / 40 W (mW) :
 
 | switch | conduction | diode | DCR | **Coss** | grille | total |
 |---|---|---|---|---|---|---|
-| Si TO-252 | 99 | 270 | 14 | **380** | 73 | 835 |
+| Si TO-252 | 99 | 270 | 14 | **390** | 73 | 844 |
 | **Si SOT-223** | 244 | 270 | 13 | **140** | 33 | **701** |
 | SuperSO8 | 24 | 270 | 14 | **935** | 240 | 1483 |
 | EPC2007C | 98 | 270 | 13 | **289** | 6 | **676** |
@@ -1102,10 +1102,18 @@ ne repose sur lui.**
   calibration en recoupant les **trois** courbes au tableau à 50 V
   (−0,9 / +1,1 / +1,6 %). Tolérance désormais retenue : ±8 %.
 
-  **Réserve ouverte** : la courbe du ROHM RD3P04BBKHRB a été lue de la
-  même façon et n'a **pas** été soumise à cette seconde passe. Elle porte
-  donc le même risque, non quantifié. Son axe est correctement étiqueté,
-  ce qui rend l'erreur moins probable sans l'exclure. Asymétrie notable au passage : les fiches GaN publient
+  **Réserve levée.** La courbe du ROHM a été soumise à la même seconde
+  passe : $E_{oss}$ passe de 475,5 à **487,1 nJ, soit +2,4 %**, donc bien
+  dans la tolérance annoncée. La première lecture s'en écartait de −8 à
+  +10 % selon le point, mais **sans biais systématique** — d'où un effet
+  net faible. L'explication de la différence avec le FDT est dans
+  l'étiquetage : l'axe de la Fig.17 du ROHM porte bien 1/10/100/1000,
+  celui de la Fig.8 du FDT un « 0 » impossible. Tolérances désormais
+  ±5 % (ROHM, relu au pixel) et ±8 % (FDT).
+
+  Les deux courbes ont passé un double contrôle indépendant : recoupement
+  au tableau à 50 V sur les **trois** capacités, et constance de
+  $C_{gs}=C_{iss}-C_{rss}$, qui ne dépend pas de $V_{DS}$. Asymétrie notable au passage : les fiches GaN publient
   systématiquement ce qu'il faut pour calculer une perte de commutation,
   les fiches Si de grande diffusion non.
 - **Températures à 25 °C.** À 125 °C l'avantage du SOT-223 s'efface
