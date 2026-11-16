@@ -69,19 +69,40 @@ GRAPH_TABLE = {
         coss=np.array([700, 690, 640, 600, 500, 400, 330, 280, 200, 115, 90, 80, 75]) * 1e-12,
         crss=np.array([135, 133, 110, 95, 70, 50, 35, 25, 15, 9, 8.5, 7.5, 7]) * 1e-12,
         #                                            ^^^       ^ ancres TABLE p.3
+        eoss_tol=0.10,   # test de sensibilite, voir SI_EOSS_TOL
         src="datasheet ROHM RD3P04BBKHRB rev.005 p.3 (tbl) / p.9 Fig.17 (courbe)",
     ),
     # Si en PETIT boitier : meme classe de tension, puce ~3x plus petite.
     # C'est la piece qui porte la demonstration du calibre (README S7).
     # onsemi ne publie ni Qoss ni Coss_ER non plus.
+    # COURBE CORRIGEE PAR LA SECONDE PASSE D'EXTRACTION.
+    #
+    # La premiere lecture, faite a l'oeil sur un rendu a 400 dpi, concordait
+    # aux extremites (220 pF a 0.1 V, 46 a 50 V, 33 a 100 V) mais
+    # sous-estimait le milieu de 30 a 44 % : 105 au lieu de 137 pF a 10 V,
+    # 75 au lieu de 108 a 20 V, 60 au lieu de 83 a 30 V. Signature d'une
+    # erreur de calibration de l'echelle logarithmique.
+    #
+    # Cette figure y expose particulierement : son axe Y porte un « 0 » en
+    # bas, ce qui est IMPOSSIBLE sur une echelle log. La seconde passe a
+    # etabli geometriquement que le bas vaut 1 pF (decade = 663.9 px,
+    # reperes 10/100/200/300/400 a +/-1 px de la position predite), puis a
+    # valide cette calibration en recoupant les TROIS courbes au tableau a
+    # 50 V : -0.9 %, +1.1 %, +1.6 %. Une calibration fausse aurait decale
+    # les trois d'un facteur commun et l'accord n'aurait pas tenu.
+    #
+    # Effet sur Eoss(80 V) : 153.5 -> 175.6 nJ, soit +14.4 % -- donc HORS
+    # de la tolerance de +/-10 % que la premiere passe annoncait.
     "FDT86113LZ": dict(
         tech="Si", part="FDT86113LZ", boitier="SOT-223 (TO-223)",
         rds_ohm=0.075, rds_hot_ohm=0.140, qg_c=4.1e-9, vgs=10.0, qgd_c=0.85e-9,
-        v=np.array([0.1, 0.3, 1, 2, 3, 5, 7, 10, 15, 20, 30, 40, 50, 70, 100], float),
-        coss=np.array([220, 200, 180, 165, 150, 135, 120, 105, 88, 75, 60, 50, 46, 38, 33]) * 1e-12,
-        crss=np.array([35, 32, 30, 28, 26, 24, 22, 18, 14, 11, 7.5, 5.0, 3.1, 2.9, 2.7]) * 1e-12,
-        #                                                           ^^^ ancres TABLE p.2
-        src="datasheet onsemi FDT86113LZ p.2 (tbl) / p.5 Fig.8 (courbe)",
+        v=np.array([0.1, 1, 3, 10, 20, 30, 50, 100], float),
+        coss=np.array([220, 194, 172, 137, 108, 83, 46.5, 33]) * 1e-12,
+        crss=np.array([35.7, 29.0, 23.6, 16.0, 10.4, 6.3, 3.15, 2.45]) * 1e-12,
+        #                                            ^^^^ ancre TABLE p.2 (3.1)
+        eoss_tol=0.08,   # seconde passe : +/-3 % zones plates, +/-8 % dans le coude
+        src="datasheet onsemi FDT86113LZ Rev.3 (mars 2025) p.2 (tbl) / p.5 Fig.8 "
+            "(courbe, lue au pixel a 900 dpi lors de la seconde passe)",
     ),
 }
 
@@ -91,10 +112,20 @@ SI_V_V = GRAPH_TABLE["Si"]["v"]
 SI_COSS_F = GRAPH_TABLE["Si"]["coss"]
 SI_CRSS_F = GRAPH_TABLE["Si"]["crss"]
 
-# Incertitude retenue sur Eoss(Si). Obtenue par variation du point le plus
-# fragile (Coss a 40 V, en plein genou) de 150 a 260 pF : Eoss bouge de
-# -4.2 % a +5.0 %. On retient +/-10 % pour couvrir aussi l'incertitude sur
-# la POSITION du genou, non testee par cette variation-la.
+# Incertitude retenue sur Eoss du ROHM RD3P04BBKHRB (pas du FDT, qui a la
+# sienne dans GRAPH_TABLE). Obtenue par variation du point le plus fragile
+# (Coss a 40 V, en plein genou) de 150 a 260 pF : Eoss bouge de -4.2 % a
+# +5.0 %. On retient +/-10 % pour couvrir aussi l'incertitude sur la
+# POSITION du genou, non testee par cette variation-la.
+#
+# RESERVE OUVERTE PAR LA SECONDE PASSE. La courbe du FDT86113LZ, lue de la
+# MEME facon (a l'oeil, rendu 400 dpi), s'est revelee fausse de +14.4 %
+# apres relecture calibree au pixel. La courbe ROHM ci-dessus n'a PAS ete
+# soumise a cette seconde passe : elle porte donc le meme risque, non
+# quantifie. Son axe Y est correctement etiquete (1 / 10 / 100 / 1000),
+# contrairement a celui du FDT dont le bas porte un « 0 » impossible --
+# ce qui rend l'erreur moins probable, mais ne l'exclut pas. A verifier
+# avant de s'appuyer sur la FOM du ROHM pour une decision de conception.
 SI_EOSS_TOL = 0.10
 
 # --------------------------------------------------------------------------

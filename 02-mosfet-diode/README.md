@@ -807,7 +807,7 @@ $E_{oss}$ seule, ni $R_{ds}$ seul.
 | pièce | boîtier | Rds | $E_{oss}$(80V) | **FOM** |
 |---|---|---|---|---|
 | ROHM RD3P04BBKHRB | TO-252 | 30 mΩ | 476 nJ | 14,3 |
-| onsemi FDT86113LZ | **SOT-223** | 75 mΩ | 154 nJ | 11,5 |
+| onsemi FDT86113LZ | **SOT-223** | 75 mΩ | 176 nJ | 13,2 |
 | Infineon BSC070N10NS5 | SuperSO8 | 7 mΩ | 1168 nJ | **8,2** |
 | EPC2007C (GaN) | BGA | 30 mΩ | 361 nJ | 10,8 |
 | EPC2052 (GaN) | BGA | 13,5 mΩ | 634 nJ | 8,6 |
@@ -833,28 +833,28 @@ Rendement à 40 W, diode Schottky :
 
 | fsw | L | Si TO-252 | **Si SOT-223** | Si SuperSO8 | GaN EPC2007C | GaN EPC2052 |
 |---|---|---|---|---|---|---|
-| 200 kHz | 47 µH | 98,73 | 98,56 | 98,46 | **98,82** | 98,81 |
-| 300 kHz | 33 µH | 98,59 | 98,51 | 98,11 | **98,73** | 98,65 |
-| 400 kHz | 27 µH | 98,47 | **98,49** ← croisement | 97,78 | **98,67** | 98,52 |
-| 500 kHz | 27 µH | 98,34 | 98,45 | 97,43 | **98,58** | 98,36 |
-| 600 kHz | 12 µH | 98,22 | 98,39 | 97,11 | **98,50** | 98,23 |
-| 800 kHz | 12 µH | 97,95 | **98,32** | 96,42 | **98,34** | 97,92 |
+| 200 kHz | 47 µH | 98,73 | 98,54 | 98,46 | **98,82** | 98,81 |
+| 300 kHz | 33 µH | 98,59 | 98,49 | 98,11 | **98,73** | 98,65 |
+| 400 kHz | 27 µH | 98,47 | **98,47** ← croisement | 97,78 | **98,67** | 98,52 |
+| 500 kHz | 27 µH | 98,34 | 98,43 | 97,43 | **98,58** | 98,36 |
+| 600 kHz | 12 µH | 98,22 | 98,36 | 97,11 | **98,50** | 98,23 |
+| 800 kHz | 12 µH | 97,95 | **98,28** | 96,42 | **98,34** | 97,92 |
 
 **Le croisement SOT-223 / TO-252 tombe à 400 kHz** (370 kHz prédits
 analytiquement). Et à 800 kHz, un **SOT-223 en silicium ordinaire arrive
-à 0,02 point du GaN moderne** — 98,32 contre 98,34.
+à 0,06 point du GaN moderne** — 98,28 contre 98,34.
 
 Décomposition à 800 kHz / 40 W (mW) :
 
 | switch | conduction | diode | DCR | **Coss** | grille | total |
 |---|---|---|---|---|---|---|
 | Si TO-252 | 99 | 270 | 14 | **380** | 73 | 835 |
-| **Si SOT-223** | 244 | 270 | 13 | **123** | 33 | **683** |
+| **Si SOT-223** | 244 | 270 | 13 | **140** | 33 | **701** |
 | SuperSO8 | 24 | 270 | 14 | **935** | 240 | 1483 |
 | EPC2007C | 98 | 270 | 13 | **289** | 6 | **676** |
 | EPC2052 | 44 | 270 | 14 | **507** | 14 | 849 |
 
-Le SOT-223 gagne en payant 244 mW de conduction pour n'en payer que 123 en
+Le SOT-223 gagne en payant 244 mW de conduction pour n'en payer que 140 en
 $C_{oss}$ : le bon arbitrage à cette fréquence. **L'écart de calibre
 (2,0 points entre le meilleur et le pire) vaut dix fois l'écart de
 technologie (0,2 point à calibre optimal).**
@@ -868,11 +868,11 @@ technologie :
 
 | 600 → 800 kHz, 12 µH | C_oss | perte de rendement |
 |---|---|---|
-| **Si SOT-223** | 46 pF | **−0,07 pt** |
-| GaN EPC2007C | 110 pF | −0,16 pt |
+| **Si SOT-223** | 46 pF | **−0,08 pt** |
+| GaN EPC2007C | 110 pF | −0,17 pt |
 | Si TO-252 | 115 pF | −0,27 pt |
 | GaN EPC2052 | 195 pF | −0,31 pt |
-| Si SuperSO8 | 340 pF | **−0,69 pt** |
+| Si SuperSO8 | 340 pF | **−0,68 pt** |
 
 Du simple au décuple, dans l'ordre exact des capacités de sortie. Deux
 pièces en silicium occupent les deux extrêmes du classement, et un GaN se
@@ -1090,8 +1090,22 @@ ne repose sur lui.**
   point à 8 W (28 % de marge) a suffi ; le solveur n'avait pas besoin
   d'être retouché.*
 - **$E_{oss}$ des deux pièces Si lu sur courbe** (`method: graph_read`),
-  ni ROHM ni onsemi ne publiant $Q_{oss}$ ou $C_{o(er)}$. Incertitude
-  retenue ±10 %. Asymétrie notable au passage : les fiches GaN publient
+  ni ROHM ni onsemi ne publiant $Q_{oss}$ ou $C_{o(er)}$.
+
+  Une **seconde passe d'extraction en contexte aveugle** a corrigé celle du
+  FDT86113LZ : 153,5 → **175,6 nJ, soit +14,4 %**, donc hors de la
+  tolérance de ±10 % que la première passe annonçait. La première lecture,
+  faite à l'œil, concordait aux extrémités de la courbe mais sous-estimait
+  le milieu de 30 à 44 %. Cette figure est un piège : l'étiquette basse de
+  son axe Y porte un « 0 », impossible sur une échelle logarithmique. La
+  seconde passe a établi au pixel que le bas vaut 1 pF, puis validé cette
+  calibration en recoupant les **trois** courbes au tableau à 50 V
+  (−0,9 / +1,1 / +1,6 %). Tolérance désormais retenue : ±8 %.
+
+  **Réserve ouverte** : la courbe du ROHM RD3P04BBKHRB a été lue de la
+  même façon et n'a **pas** été soumise à cette seconde passe. Elle porte
+  donc le même risque, non quantifié. Son axe est correctement étiqueté,
+  ce qui rend l'erreur moins probable sans l'exclure. Asymétrie notable au passage : les fiches GaN publient
   systématiquement ce qu'il faut pour calculer une perte de commutation,
   les fiches Si de grande diffusion non.
 - **Températures à 25 °C.** À 125 °C l'avantage du SOT-223 s'efface
@@ -1108,24 +1122,24 @@ Le point de fonctionnement réel de cette carte est **5 à 10 W** ; les 50 W
 sont un argument commercial. Cette priorité change les conclusions.
 
 **La montée en fréquence est dix fois plus chère à faible charge.** Passer
-de 200 à 800 kHz coûte, pour la meilleure pièce, 0,11 pt à 50 W mais
-**1,39 pt à 8 W** — jusqu'à 4,44 pt pour la pire. La raison est que
+de 200 à 800 kHz coûte, pour la meilleure pièce, 0,19 pt à 50 W mais
+**1,54 pt à 8 W** — jusqu'à 4,44 pt pour la pire. La raison est que
 $E_{oss}f_{sw}$ est une perte **fixe**, indépendante de la charge : son
 poids relatif explose quand la charge baisse. À 8 W / 800 kHz le $C_{oss}$
 pèse 55 % de la perte du SOT-223 et **88 %** de celle de l'EPC2052.
 
 **Classement à 8 W / 200 kHz**, diode Schottky :
 
-| Si SOT-223 (46 pF) | **98,66** |
+| Si SOT-223 (46 pF) | **98,60** |
 |---|---|
 | GaN EPC2007C (110 pF) | 98,36 |
 | Si TO-252 (115 pF) | 97,88 |
 | GaN EPC2052 (195 pF) | 97,73 |
 | Si SuperSO8 (340 pF) | 95,83 |
 
-L'avance du SOT-223 sur le meilleur GaN vaut 0,30 pt à 200 kHz, pour une
+L'avance du SOT-223 sur le meilleur GaN vaut 0,24 pt à 200 kHz, pour une
 résolution de ±0,2 pt à cette charge : **favorable sans être tranché**. À
-400 kHz (0,72 pt) et 800 kHz (1,5 pt) c'est net.
+400 kHz (0,61 pt) et 800 kHz (1,3 pt) c'est net.
 
 **Résolution de cette simulation**, pour savoir quoi retenir : le résidu du
 bilan d'énergie vaut 0,7 % en médiane et 2,9 % au 90ᵉ centile, soit ±0,04 à
@@ -1143,7 +1157,7 @@ deux, seule la magnétique bouge :
 | L | SER2211-333MED 33 µH | SER1390-223MLD 22 µH |
 | empreinte | 432 mm² | **160 mm²** |
 | Isat à 50 W | 52 % | 56 % |
-| η à 8 W | **98,7 %** | 98,2 % |
+| η à 8 W | **98,6 %** | 98,1 % |
 | η à 50 W | 98,4 % | 98,2 % |
 
 Le coût de la compacité est concentré à faible charge : +0,74 pt à 5 W,
