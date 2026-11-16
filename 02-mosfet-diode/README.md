@@ -10,6 +10,14 @@ différé : « technologie transistor/diode » et « pertes de commutation ».
 > (licence, lenteur) — c'est l'objet d'une éventuelle passe de
 > raffinement ultérieure, sur moins de paramètres libres.
 
+> ⚠️ **Le §11 étend ce chapitre à 200-800 kHz et nuance fortement sa
+> conclusion §6.2** (« Si et GaN quasiment indiscernables »). Ce constat
+> restait exact pour le modèle d'alors, mais ce modèle ignorait les deux
+> mécanismes qui séparent réellement les technologies quand la fréquence
+> monte — l'énergie $E_{oss}$ et la charge de grille. Une fois ajoutés,
+> le résultat dominant n'est pas celui qu'on attendait : **le calibre du
+> transistor pèse dix fois plus lourd que sa technologie.**
+
 ## 1. Pourquoi cette étude
 
 Trois questions laissées ouvertes par le chapitre 1 :
@@ -318,6 +326,14 @@ stabilité) converge vers elle plutôt que de l'affaiblir.
 pourrait rattraper son déficit de taille par un vrai gain de
 rendement — mais ça demande le modèle plus fin déjà identifié comme
 hors périmètre ici (§9), pas une conclusion à tirer de ces données.
+
+> **Porte franchie au [§11](#11-extension-200-800-khz--le-calibre-avant-la-technologie).**
+> Le modèle plus fin a été construit ($E_{oss}$ par intégration de la
+> courbe $C_{oss}(V)$, charge de grille), et la plage étendue à 800 kHz.
+> Réponse : le GaN gagne bien, mais **0,2 point seulement** à calibre
+> optimal — pendant qu'un mauvais calibre en coûte **2,3**. La
+> recommandation 200 kHz tient pour ce point de fonctionnement ; au-delà
+> de 400 kHz c'est le **boîtier** qu'il faut changer avant la technologie.
 
 ## 8. Sélection de candidats réels (TO-252)
 
@@ -727,6 +743,497 @@ d'entrée modélisé, pas une mesure certifiée.
   une fois la techno gagnante connue, sur moins de paramètres libres.
   Hors périmètre de ce chapitre.
 
+## 11. Extension 200-800 kHz — le calibre avant la technologie
+
+Le §7 se terminait sur une porte explicitement laissée ouverte : *« un GaN
+à fréquence plus haute pourrait rattraper son déficit de taille par un
+vrai gain de rendement — mais ça demande le modèle plus fin déjà identifié
+comme hors périmètre »*. Cette section franchit cette porte. Le modèle plus
+fin a été construit, et la réponse n'est pas celle qu'on attendait.
+
+### 11.1 Ce que le modèle d'origine ne pouvait pas voir
+
+Le §6.2 concluait que Si et GaN sont « quasiment indiscernables ». Ce
+constat était exact **pour ce modèle-là**, mais pour une raison en partie
+artificielle : les deux pièces retenues sont appariées sur `Rds_on`
+(30 mΩ) **et** sur `Coss` (115 contre 118 pF) — les deux seuls paramètres
+que le modèle capturait. Deux mécanismes manquaient, et tous deux croissent
+linéairement avec la fréquence :
+
+$$\Large E_{oss}(V)=\int_0^V C_{oss}(v)\,v\,dv \qquad P_{grille}=Q_g V_{gs} f_{sw}$$
+
+**La relation de base, et son sens.** $Q_{oss}$ est l'intégrale de
+$C_{oss}$, donc $C_{oss}=dQ_{oss}/dV$ ; et comme $C_{oss}=C_{gd}+C_{ds}$,
+on a $Q_{oss}=Q_{gd}+Q_{ds}$ (l'EPC2007C l'imprime d'ailleurs tel quel sur
+sa fiche). C'est de là qu'on extrait l'exposant $\gamma$ d'une loi
+$C_{oss}(v)=C_{oss}(50)(50/v)^\gamma$ quand le constructeur publie le
+couple $(C_{oss}, Q_{oss})$ :
+
+$$\Large Q_{oss}(50)=\frac{C_{oss}(50)\cdot 50}{1-\gamma}\;\Longrightarrow\;\gamma=1-\frac{50\,C_{oss}(50)}{Q_{oss}(50)}$$
+
+**Le piège du point unique.** Le raccourci $\tfrac12 C_{oss}(50\text{V})V^2$
+sous-estime le Si ROHM de **23 %** (368 contre 476 nJ) mais ne se trompe
+que de 1,5 à 4 % sur les GaN. Parce que le $C_{oss}$ du Si a un genou
+brutal entre 30 et 55 V — pile dans la zone que la pondération en $v$
+privilégie — alors que les GaN sont quasi plats. **La valeur unique de
+datasheet est un piège spécifiquement côté silicium.**
+
+### 11.2 Trois validations, dont une qui a échoué
+
+| contrôle | résultat | portée |
+|---|---|---|
+| $C_{oss(ER)}$ recalculé vs publié (EPC2052, seul à le publier) | **−1,8 %** | valide la méthode par loi de puissance |
+| $C_{gs}=C_{iss}-C_{rss}$ constant (FDT86113LZ) | **3,4 %** d'écart | valide la lecture graphique |
+| $Q_{gd}$ par $\int C_{rss}\,dv$ vs table (ROHM) | **−24 %** ❌ | voir ci-dessous |
+
+Le troisième contrôle **a échoué**, et c'est instructif. L'explication
+n'est pas une erreur de lecture : la Fig.17 donne $C_{rss}$ à $V_{GS}=0$,
+canal bloqué, en petit signal ; le $Q_{gd}$ de table est relevé **pendant
+le palier Miller**, canal conducteur à 10 A, où la capacité grille-drain
+est nettement plus grande. L'écart va dans le sens attendu. Ce contrôle ne
+vaut donc que comme validation d'**ordre de grandeur** — et surtout il ne
+porte pas sur $E_{oss}$, qui est une grandeur d'**état bloqué**, donc lue
+dans la bonne condition. La garantie sur $E_{oss}$ vient d'un test de
+sensibilité séparé : ±30 % sur le point le plus fragile (le genou à 40 V)
+ne déplace $E_{oss}$ que de −4 à +5 %.
+
+### 11.3 La figure de mérite, et le calibre optimal
+
+Le produit $E_{oss}\cdot R_{ds}$ élimine la surface de puce ($E_{oss}$ y
+est proportionnelle, $R_{ds}$ inversement) : c'est une **constante de
+technologie**. C'est elle qu'il faut comparer pour opposer Si et GaN — pas
+$E_{oss}$ seule, ni $R_{ds}$ seul.
+
+| pièce | boîtier | Rds | $E_{oss}$(80V) | **FOM** |
+|---|---|---|---|---|
+| ROHM RD3P04BBKHRB | TO-252 | 30 mΩ | 476 nJ | 14,3 |
+| onsemi FDT86113LZ | **SOT-223** | 75 mΩ | 154 nJ | 11,5 |
+| Infineon BSC070N10NS5 | SuperSO8 | 7 mΩ | 1168 nJ | **8,2** |
+| EPC2007C (GaN) | BGA | 30 mΩ | 361 nJ | 10,8 |
+| EPC2052 (GaN) | BGA | 13,5 mΩ | 634 nJ | 8,6 |
+
+En minimisant $P=I^2R+\mathrm{FOM}\cdot f_{sw}/R$ :
+
+$$\Large R^{*}=\frac{\sqrt{\mathrm{FOM}\cdot f_{sw}}}{I_{rms}}$$
+
+**Le $R_{ds}$ optimal croît comme $\sqrt{f_{sw}}$** : 30 mΩ à 200 kHz,
+mais 46 à 61 mΩ à 800 kHz selon la technologie. Monter en fréquence impose
+un transistor **plus petit**, pas plus gros. Contre-intuitif, et c'est le
+cœur du résultat.
+
+Conséquence immédiate : l'OptiMOS 5 a la **meilleure FOM du lot, GaN
+comprise** (8,2 nJ·Ω) et c'est pourtant la pire pièce en service. Il fait
+7 mΩ là où l'optimum est à 46 mΩ — une puce 6,6 fois trop grande, donc
+6,6 fois trop de $C_{oss}$, pour économiser une conduction qui ne coûtait
+que 0,05 point à 1,75 A.
+
+### 11.4 Résultats mesurés — 1800 runs, 343 cellules
+
+Rendement à 40 W, diode Schottky :
+
+| fsw | L | Si TO-252 | **Si SOT-223** | Si SuperSO8 | GaN EPC2007C | GaN EPC2052 |
+|---|---|---|---|---|---|---|
+| 200 kHz | 47 µH | 98,73 | 98,56 | 98,46 | **98,82** | 98,81 |
+| 300 kHz | 33 µH | 98,59 | 98,51 | 98,11 | **98,73** | 98,65 |
+| 400 kHz | 27 µH | 98,47 | **98,49** ← croisement | 97,78 | **98,67** | 98,52 |
+| 500 kHz | 27 µH | 98,34 | 98,45 | 97,43 | **98,58** | 98,36 |
+| 600 kHz | 12 µH | 98,22 | 98,39 | 97,11 | **98,50** | 98,23 |
+| 800 kHz | 12 µH | 97,95 | **98,32** | 96,42 | **98,34** | 97,92 |
+
+**Le croisement SOT-223 / TO-252 tombe à 400 kHz** (370 kHz prédits
+analytiquement). Et à 800 kHz, un **SOT-223 en silicium ordinaire arrive
+à 0,02 point du GaN moderne** — 98,32 contre 98,34.
+
+Décomposition à 800 kHz / 40 W (mW) :
+
+| switch | conduction | diode | DCR | **Coss** | grille | total |
+|---|---|---|---|---|---|---|
+| Si TO-252 | 99 | 270 | 14 | **380** | 73 | 835 |
+| **Si SOT-223** | 244 | 270 | 13 | **123** | 33 | **683** |
+| SuperSO8 | 24 | 270 | 14 | **935** | 240 | 1483 |
+| EPC2007C | 98 | 270 | 13 | **289** | 6 | **676** |
+| EPC2052 | 44 | 270 | 14 | **507** | 14 | 849 |
+
+Le SOT-223 gagne en payant 244 mW de conduction pour n'en payer que 123 en
+$C_{oss}$ : le bon arbitrage à cette fréquence. **L'écart de calibre
+(2,0 points entre le meilleur et le pire) vaut dix fois l'écart de
+technologie (0,2 point à calibre optimal).**
+
+#### Le résultat le plus propre : à inductance identique
+
+Deux paires de fréquences partagent exactement la même pièce, donc le même
+DCR. La différence est alors un **effet de fréquence pur**, sans aucun
+confondant — et le classement suit exactement le $C_{oss}$, pas la
+technologie :
+
+| 600 → 800 kHz, 12 µH | C_oss | perte de rendement |
+|---|---|---|
+| **Si SOT-223** | 46 pF | **−0,07 pt** |
+| GaN EPC2007C | 110 pF | −0,16 pt |
+| Si TO-252 | 115 pF | −0,27 pt |
+| GaN EPC2052 | 195 pF | −0,31 pt |
+| Si SuperSO8 | 340 pF | **−0,69 pt** |
+
+Du simple au décuple, dans l'ordre exact des capacités de sortie. Deux
+pièces en silicium occupent les deux extrêmes du classement, et un GaN se
+retrouve entre deux Si. **À cette puissance et cette fréquence, le
+$C_{oss}$ explique tout, et la nature du semi-conducteur presque rien.**
+
+La diode, elle, ne change pas de verdict : la Schottky bat l'ultrafast de
+**+65 % à +81 %** de perte sur toute la plage, l'écart se creusant avec la
+fréquence. Le §6.1 est confirmé et renforcé.
+
+### 11.5 Visualisation
+
+**Page interactive : [`pertes-3d.html`](pertes-3d.html)** — surface (perte)
+= f(fréquence, puissance), **une par mécanisme** : Rds, Vf, DCR, Coss,
+grille, total. Autonome, aucune dépendance, s'ouvre au double-clic.
+
+**Captures fixes** (vue 3/4 tournée de 180°, SOT-223 contre EPC2052,
+Schottky contre ultrafast, échelle commune aux quatre panneaux) :
+
+| | |
+|---|---|
+| ![perte totale](illustrations/20-captures-perte-totale.png) | ![rendement](illustrations/21-captures-rendement.png) |
+| Perte totale | Rendement |
+
+![perte de la diode](illustrations/22-captures-perte-diode.png)
+
+La dernière est la plus parlante : la surface Schottky est plate et basse,
+l'ultrafast se relève fortement vers les hautes puissances **et** les
+hautes fréquences — les deux composantes du surcoût (chute directe et
+recouvrement) y sont visibles séparément.
+
+- **Unité de l'axe Z** : mW (absolu), % de P_out (relatif), ou η. En
+  rendement l'échelle de couleur s'inverse pour que le vert reste « bon ».
+- **Échelle globale par défaut**, calculée sur les 5 transistors × 2 diodes.
+  Une échelle qui se recadre à chaque changement de pièce fait paraître
+  semblables deux surfaces très inégales : c'est la vue qui ment, pas la
+  donnée. Vérifié par exécution du vrai code sous node — bornes strictement
+  identiques pour les cinq. L'échelle locale reste accessible, et le
+  graphique annonce laquelle est active.
+- **Fenêtre de rendement fixée à 85-100 %** et pertes **écrêtées au 95ᵉ
+  centile**. Les charges s'étalant de 5 à 60 W, les pertes couvrent un
+  facteur 40 en absolu : sans écrêtage, un seul point extrême (3449 mW,
+  SOT-223 + ultrafast à 800 kHz / 60 W, parfaitement physique) aplatit tout
+  le reste. Les sommets au-delà sont **découpés à l'affichage, pas retirés
+  des données** — survol et tableau donnent toujours la valeur vraie.
+- **Les cellules absentes sont marquées d'un ✕ au sol.** Une tuile exige
+  ses quatre sommets, donc une cellule manquante en supprime jusqu'à
+  quatre : les trous sont plus larges que les données absentes, et sans
+  marque on ne peut pas distinguer un trou de données d'un creux réel.
+- **DCR réel / DCR constant 10 mΩ** — voir §11.6 : indispensable pour lire
+  une tendance en fréquence, puisque l'inductance change à chaque pas.
+- Sélecteurs transistor et diode, échelle Z linéaire/log, trois vues
+  préréglées, rotation à la souris, zoom à la molette.
+- **Survol** d'un point : les trois unités d'un coup, le mode, le seuil
+  DCM/CCM et la référence d'inductance avec son DCR. **Clic** pour épingler.
+- L'inductance (valeur, référence, DCR) est rappelée sous l'axe des
+  fréquences, dans la bulle et dans un tableau dédié — sans elle la surface
+  DCR se lirait comme un effet de fréquence alors que c'est un changement
+  de pièce.
+
+Chaque bouton de mécanisme porte une pastille **mesuré** (SPICE) ou
+**modèle** (intégrale de datasheet) : le partage est visible dans
+l'interface, pas enfoui dans une note.
+
+### 11.6 Méthode — ce qui a changé, et ce que ça a coûté
+
+**Matrice iso-mode, une seule famille.** L est choisie à chaque fréquence
+pour approcher une frontière DCM/CCM commune — **sans jamais sortir de la
+série SER2211** :
+
+| fsw | 200 k | 300 k | 400 k | 500 k | 600 k | 800 k |
+|---|---|---|---|---|---|---|
+| L | 47 µH | 33 µH | 27 µH | 27 µH | 12 µH | 12 µH |
+| DCR typ | 8,95 | 8,95 | 6,84 | 6,84 | 3,15 | 3,15 mΩ |
+| P_seuil | 15,96 | 15,15 | 13,89 | 11,11 | 20,83 | 15,62 W |
+| I_vallée @40 W | 1,22 | 1,26 | 1,33 | 1,46 | 0,98 | 1,24 A |
+
+Une version antérieure panachait SER2211 et SER1390 pour serrer les seuils
+dans 13,6-16,7 W. Le DCR y sautait de 3,15 à 21 mΩ — **facteur 6,7, soit
+0,19 point de rendement**, c'est-à-dire l'ordre de grandeur même de l'effet
+de technologie recherché. Rester dans la famille ramène l'étendue à un
+facteur 2,8 et le biais à **0,06 point** : on corrige la cause au lieu de
+normaliser l'effet après coup.
+
+Prix payé : les seuils s'étalent de 11,1 à 20,8 W, parce que la série ne
+porte ni 15 ni 22 µH (3,0 / 5,3 / 8,2 / 12 / 27 / 33 / 47). C'est ce qui
+impose de placer les points de charge **à l'écart des seuils** : 25 W et
+non 20 W (à 20 W le point serait en DCM à 600 kHz, seuil 20,83 W, et en
+CCM partout ailleurs — une différence de *mode* se lirait comme une
+différence de *fréquence*), et 8 W et non 10 W (à 10 W on n'est qu'à 10 %
+sous le seuil de 500 kHz, et le solveur n'encadrait plus la cible : une
+seule pièce sur cinq y avait une mesure).
+
+Charges retenues : **5 / 8 / 25 / 30 / 40 / 50 W**. Le plafond est à 50 W,
+le maximum de la spécification — une version antérieure montait à 60 W,
+donc au-delà du domaine d'emploi, ce qui rendait les marges de saturation
+et les températures de jonction pessimistes sans correspondre à un cas
+réel.
+
+Bénéfice secondaire : **deux paires partagent la même pièce** — 400/500 kHz
+en 27 µH, 600/800 kHz en 12 µH. Chacune isole un effet de fréquence pur, à
+DCR rigoureusement identique.
+
+Sans cette discipline de mode, le point 800 kHz / 4,7 µH initialement
+envisagé tombait pile sur la frontière, vallée à 30 mA : le recouvrement y
+disparaissait, et on aurait conclu « le Qrr ne compte plus à 800 kHz »
+alors que c'est le **mode** qui l'avait tué, pas la fréquence.
+
+**Topologie double-pulse.** Cout + Rload remplacés par une source de 80 V
+raide : plus d'ondulation, plus de réservoir à Q élevé, donc le piège
+numérique du chapitre 1 disparaît par construction. *Prix payé, sous-estimé
+au moment de retenir cette topologie* : la sortie raide n'exerce aucun
+rappel, donc D doit être résolu finement et le courant dérive lentement
+(voir réserves).
+
+**Trois défauts trouvés et corrigés en cours de route**, documentés plutôt
+qu'effacés :
+
+1. *Divergence sur 25 cellules* (« Timestep too small, trouble with
+   dmod-instance »). Une diode purement exponentielle en série avec une
+   inductance n'a rien qui borne son $dI/dt$ au blocage. Ajout de $C_j$ :
+   toute diode réelle en a une, l'omettre n'est pas « plus idéal », c'est
+   non physique.
+2. *Signe du courant de diode inversé*. Repéré parce que la conduction du
+   SOT-223 impliquait $I_{rms}$ = 2,73 A au lieu de 1,78 attendus — le
+   switch se voyait attribuer le courant de la diode. Avec le signe
+   corrigé, min(I_switch) = −0,003 A ; avec le mauvais, −15 A.
+3. *108 cellules DCM non résolues*. En DCM le rapport cyclique n'a rien à
+   voir avec le CCM : $D=\sqrt{2P L f_{sw}(V_{out}-V_{in})/(V_{in}^2V_{out})}$
+   donne 0,42 à 5 W/200 kHz contre 0,75 en CCM. L'estimateur CCM visait
+   16 W et aucun encadrement ne redescendait à 5 W.
+
+**Détection de mode portée du chapitre 1.** Le critère initial (minimum du
+courant, échantillon unique) classait 18 cellules de travers, piégé par la
+sonnerie du nœud de commutation. Remplacé par la **fraction de temps mort**
+intégrée sur la fenêtre : concordance **240/240 CCM et 104/104 DCM, zéro
+désaccord**.
+
+**Normalisation du DCR — un biais résiduel, et comment il a été traité.**
+Même en restant dans une seule famille, le DCR varie encore d'un facteur
+2,8 le long du balayage (3,15 à 8,95 mΩ), soit **0,06 point de rendement**.
+C'est désormais trois fois plus petit que l'écart de technologie mesuré,
+donc non bloquant — mais toujours visible sur une lecture en fréquence.
+
+La page porte donc une bascule **DCR réel / DCR constant 10 mΩ**, la perte
+étant recalculée par $P = I_{rms}^2 R$ depuis l'Irms mesuré. Légitime sans
+resimuler, puisque le réglage du rapport cyclique tient le point de
+fonctionnement fixe : le courant ne bouge pas quand on change le DCR.
+
+Deux leçons de méthode, dans l'ordre où elles se sont imposées :
+
+1. *Signaler un biais n'est pas le neutraliser.* La version panachée portait
+   une réserve écrite sur le saut de DCR, et c'est tout — la lecture en
+   fréquence restait faussée de 0,18 point entre 500 et 800 kHz.
+2. *Corriger la cause bat corriger l'effet.* La bascule de normalisation a
+   été écrite avant de se demander si le panachage de familles était
+   nécessaire. Il ne l'était pas : changer les pièces a divisé le biais par
+   trois d'un coup, là où la normalisation ne faisait que le compenser à
+   l'affichage. La bascule reste utile, mais elle traite maintenant un
+   résidu au lieu de masquer un défaut de plan d'expérience.
+
+À noter dans les deux cas : le biais est **identique pour les cinq
+transistors** — à fréquence donnée ils partagent la même inductance, donc
+le DCR s'annule dans toute comparaison entre pièces. Le croisement
+SOT-223/TO-252 et l'écart Si/GaN n'ont jamais été concernés.
+
+**Garde-fou sur la conservation de l'énergie.** En régime, le courant moyen
+d'inductance vaut $(P_{out}+\text{pertes})/V_{in}$. Un écart important ne
+signale pas une mesure imprécise mais un point de fonctionnement qui **n'a
+pas convergé**. Deux cellules — EPC2007C à 500 kHz / 10 W, les deux diodes —
+sortaient à $I_L$ = 22,7 A contre 1,47 A attendus, **facteur 15**, avec
+15,8 W de conduction switch sur une sortie de 10 W. Cause identifiée : à
+500 kHz le seuil DCM/CCM tombe à 11,11 W pour un point à 10 W, soit 10 % de
+marge ; ni la loi DCM ni la loi CCM n'y vaut, et le solveur de rapport
+cyclique a extrapolé de travers.
+
+Ces deux cellules écrasaient toute la plage d'affichage (le rendement global
+descendait à 33,6 % au lieu de 80,3 %) et constituaient les deux seuls
+désaccords de mode du jeu. Elles sont désormais **rejetées explicitement et
+listées en sortie de balayage**, pas silencieusement conservées.
+
+Choix du critère, à noter : un filtre sur la **dérive** du courant aurait
+semblé naturel — c'est d'ailleurs la métrique que le code calculait déjà.
+Il discrimine mal : à un seuil de 15 % il rejetterait 25 cellules dont la
+plupart sont saines, et laisserait quand même passer d'autres divergences.
+Le bilan d'énergie, lui, isole exactement les points fautifs parce qu'il
+teste la **définition** d'un régime établi plutôt qu'un symptôme.
+
+**Contrôle du seul paramètre non sourcé.** $C_j$ = 100 pF est un ordre de
+grandeur, pas une valeur de fiche. Rejoué sur 12 cellules témoins à 50,
+100 et 200 pF : écart maximal **2,2 % (12,6 mW)** sur un facteur 4, contre
+~150 mW d'écart entre pièces que le chapitre exploite. **Aucune conclusion
+ne repose sur lui.**
+
+### 11.7 Réserves
+
+- **Dérive du courant jusqu'à 19 %** sur la fenêtre de mesure aux points de
+  faible puissance. La sortie raide n'exerce aucun rappel. L'erreur sur les
+  pertes reste du second ordre (elles varient en $I^2$, et pertes et
+  puissance sont intégrées sur la **même** fenêtre, donc le rapport est
+  cohérent) — mais **ce n'est pas un régime établi**, c'est une mesure à
+  courant imposé, façon double-pulse. Légitime pour caractériser des
+  pertes, à condition de le nommer correctement.
+- **343 cellules sur 360 exploitées**, aucun run en échec et aucun rejet
+  par le bilan d'énergie. Les 17 absentes sont toutes au coin 5-8 W, en
+  DCM profond, concentrées sur les pièces à fort $C_{oss}$ (BSC070N10NS5
+  pour 9 d'entre elles) : à faible charge leur énergie de sortie domine
+  tout et le point de fonctionnement devient difficile à encadrer.
+  Concordance de mode : **240/240 CCM et 103/103 DCM, zéro désaccord**.
+
+  *Une version antérieure plaçait un point de charge à 10 W et n'en
+  exploitait que 333, dont 2 rejetées pour divergence. Cause : à 500 kHz
+  le seuil DCM/CCM vaut 11,11 W, donc ce point était à 10 % de la
+  frontière — une seule pièce sur cinq y avait une mesure. Déplacer le
+  point à 8 W (28 % de marge) a suffi ; le solveur n'avait pas besoin
+  d'être retouché.*
+- **$E_{oss}$ des deux pièces Si lu sur courbe** (`method: graph_read`),
+  ni ROHM ni onsemi ne publiant $Q_{oss}$ ou $C_{o(er)}$. Incertitude
+  retenue ±10 %. Asymétrie notable au passage : les fiches GaN publient
+  systématiquement ce qu'il faut pour calculer une perte de commutation,
+  les fiches Si de grande diffusion non.
+- **Températures à 25 °C.** À 125 °C l'avantage du SOT-223 s'efface
+  (1,53 contre 1,56 pt), sa conduction passant à 140 mΩ. Si la carte
+  chauffe, le petit boîtier perd son intérêt.
+- **La fenêtre 46-61 mΩ n'est servie par aucun Si haute performance** : la
+  gamme 100 V d'Infineon est entièrement sous 10 mΩ (elle vise la
+  rectification synchrone à fort courant). Le calibre optimal de ce
+  convertisseur n'est tout simplement pas un marché.
+
+### 11.8 Dimensionner sur la charge partielle, pas sur le point nominal
+
+Le point de fonctionnement réel de cette carte est **5 à 10 W** ; les 50 W
+sont un argument commercial. Cette priorité change les conclusions.
+
+**La montée en fréquence est dix fois plus chère à faible charge.** Passer
+de 200 à 800 kHz coûte, pour la meilleure pièce, 0,11 pt à 50 W mais
+**1,39 pt à 8 W** — jusqu'à 4,44 pt pour la pire. La raison est que
+$E_{oss}f_{sw}$ est une perte **fixe**, indépendante de la charge : son
+poids relatif explose quand la charge baisse. À 8 W / 800 kHz le $C_{oss}$
+pèse 55 % de la perte du SOT-223 et **88 %** de celle de l'EPC2052.
+
+**Classement à 8 W / 200 kHz**, diode Schottky :
+
+| Si SOT-223 (46 pF) | **98,66** |
+|---|---|
+| GaN EPC2007C (110 pF) | 98,36 |
+| Si TO-252 (115 pF) | 97,88 |
+| GaN EPC2052 (195 pF) | 97,73 |
+| Si SuperSO8 (340 pF) | 95,83 |
+
+L'avance du SOT-223 sur le meilleur GaN vaut 0,30 pt à 200 kHz, pour une
+résolution de ±0,2 pt à cette charge : **favorable sans être tranché**. À
+400 kHz (0,72 pt) et 800 kHz (1,5 pt) c'est net.
+
+**Résolution de cette simulation**, pour savoir quoi retenir : le résidu du
+bilan d'énergie vaut 0,7 % en médiane et 2,9 % au 90ᵉ centile, soit ±0,04 à
+±0,12 pt à 40 W, et jusqu'à **±0,21 pt à 8 W** (la même erreur absolue se
+divise par une puissance cinq fois plus petite). Les écarts sous ~0,2 pt à
+faible charge ne sont pas retenus comme significatifs.
+
+**Deux configurations en commutation dure**, toutes deux avec FDT86113LZ
+et une Schottky — le choix des semi-conducteurs ne change pas entre les
+deux, seule la magnétique bouge :
+
+| | rendement | compacte |
+|---|---|---|
+| fsw | 200 kHz | 400 kHz |
+| L | SER2211-333MED 33 µH | SER1390-223MLD 22 µH |
+| empreinte | 432 mm² | **160 mm²** |
+| Isat à 50 W | 52 % | 56 % |
+| η à 8 W | **98,7 %** | 98,2 % |
+| η à 50 W | 98,4 % | 98,2 % |
+
+Le coût de la compacité est concentré à faible charge : +0,74 pt à 5 W,
++0,45 à 8 W, et seulement **+0,04 à 50 W** — les deux configurations sont
+indiscernables à pleine charge.
+
+Détail utile : **le rendement culmine à 25 W**, pas à pleine charge. En
+dessous le $C_{oss}$ domine, au-dessus la conduction.
+
+Le 33 µH plutôt que le 47 µH vient d'une anomalie de la table Coilcraft :
+le 47 µH a un Isat de **4,4 A** contre 7,1 A pour le 33 µH de la même
+série. L'ondulation plus forte coûte ~0,03 pt de conduction, pour 24 points
+de marge de saturation gagnés.
+
+### 11.9 Piste retenue pour la suite : le DCM permanent
+
+> ⚠️ **Tout ce paragraphe est ANALYTIQUE**, calculé sur les données de
+> fiche. Rien n'en est simulé : le balayage ne contient ni le 4,7 µH, ni la
+> détection d'anneau, ni l'inductance de boucle. À vérifier avant d'en
+> faire une décision de conception.
+
+La contrainte CEM étant la plus forte, une traversée de la frontière
+DCM/CCM dans la plage d'emploi est problématique : elle impose de qualifier
+**deux signatures** sur un même produit. Rester **toujours en DCM**
+supprime la traversée, et le balayage apporte déjà un argument mesuré en sa
+faveur : le surcoût de la diode ultrafast est **plat à 32 mW en DCM** sur
+tout le balayage 200–800 kHz, contre 481 mW en CCM à 50 W. C'est la
+signature directe de la disparition du recouvrement, principale source
+large bande.
+
+Avec $L=4{,}7\ \mu$H à 400 kHz, le seuil tombe à **79,8 W** : DCM garanti
+sur toute la plage 5–50 W.
+
+**Le ZVS y est physiquement disponible**, et pas seulement du valley
+switching. L'oscillation de temps mort est centrée sur $V_{in}$ et
+d'amplitude $(V_{out}-V_{in})$, donc son minimum vaut $2V_{in}-V_{out} =
+-40$ V. Négatif, donc la **diode de corps écrête le nœud à zéro** pendant
+**97 ns** — le temps que le courant d'inductance, négatif à cet instant,
+remonte sous l'effet de $V_{in}$. La fenêtre de ZVS représente 31 % du
+cycle d'anneau, pas un instant.
+
+Conséquence pour une commande à **fréquence fixe** : même sans
+synchronisation, l'allumage tombe à une phase quelconque d'un anneau dont
+31 % du temps est à zéro et le reste bien sous $V_{out}$. La perte
+d'allumage y est divisée par **2,7** (57 nJ contre 153 nJ). La fréquence
+fixe ne coûte donc que 0,29 pt à 8 W par rapport au ZVS parfait, pas 0,77.
+
+La coupure, elle, est **déjà douce** : le courant charge le $C_{oss}$ et
+fait monter le nœud en 7,8 ns à 8 W, alors que le courant du MOSFET tombe
+en 1,5 ns. Le transistor est bloqué avant que la tension ait monté. Le
+$C_{oss}$ aide à la coupure autant qu'il nuit à l'allumage — nuance que le
+bilan du §11.4 n'intègre pas, et qui le rend plutôt pessimiste.
+
+**Le classement des transistors s'en trouve modifié**, car le DCM permanent
+impose un courant crête de 6,38 A à 50 W contre 3,4 A en CCM :
+
+| en DCM permanent | à 8 W | à 50 W |
+|---|---|---|
+| EPC2007C | **98,46** | 98,60 |
+| FDT86113LZ | 98,39 | **97,92** (dernier) |
+| EPC2052 | 98,03 | **98,77** (premier) |
+
+Le SOT-223 passe de premier à dernier quand la charge monte : ses 75 mΩ,
+qui étaient un atout en commutation dure, deviennent une faute quand le
+courant crête triple.
+
+**Matériel de synchronisation, si on veut récupérer les 0,29 pt.** Un
+diviseur compensé (R1 1 MΩ // C1 10 pF, R2 10 kΩ // C2 1 nF — 6,3 mW de
+dissipation, contre 7,1 W pour un diviseur résistif nu de bande passante
+équivalente), un comparateur rapide, et un retard calibré. Le retard peut
+être **fixe** : sur 18–28 V d'entrée il ne dérive que de ±8 ns pour une
+fenêtre de 97 ns.
+
+Le **F28P551 dispose du matériel nécessaire** — vérifié dans le C2000Ware
+installé : `f28p55x/examples/epwm/epwm_ex6_valley_switching.c`, et le
+driverlib expose `EPWM_enableValleyCapture`, `EPWM_startValleyCapture`,
+`EPWM_setValleyDelayValue`, avec les registres `VCAPCTL`, `VCNTCFG`,
+`DCCAP`. La synchronisation est donc une **option logicielle activable plus
+tard**, pas une décision d'architecture : il suffit de prévoir le diviseur
+et une entrée CMPSS au routage.
+
+### 11.10 Deux architectures à comparer au chapitre suivant
+
+1. **GaN en DCM permanent, 400 kHz** — 4,7 µH, EPC2007C ou EPC2052,
+   Schottky. Signature CEM unique, pas de zéro à droite, ZVS partiel
+   gratuit.
+2. **CCM avec un MOSFET, inductance à la limite du DCM** — pour mesurer ce
+   que coûte réellement la traversée de frontière, et si la conduction plus
+   faible du CCM compense la pénalité CEM.
+
 ## Reproduire
 
 Simulation LTspice (mode batch), pilotée en Python — voir
@@ -737,6 +1244,21 @@ adapter.
 - Balayage complet (240 points, ~80 minutes) : `python run_sweep_tech.py`
 - Graphiques : `python make_plots_tech.py`
 
-Les CSV de résultats et les `.asc`/`.log`/`.raw` intermédiaires ne sont
-pas versionnés (régénérables) — seuls les scripts et les PNG finaux le
-sont.
+### Extension §11 (200-800 kHz)
+
+Moteur **ngspice** cette fois, pas LTspice : les netlists de l'extension
+sont écrites en SPICE portable, ce qui préserve la vérification croisée à
+deux moteurs qui a fait la crédibilité du chapitre 1. Dépend des skills
+`sim-commun` et `sim-spice` du workspace.
+
+```bash
+python switch_energy.py        # modèle énergétique + FOM + calibre optimal
+python gen_boost2_dpt.py       # matrice iso-mode, exemple de netlist
+python run_sweep_dpt.py        # 1800 runs ngspice, ~6 min sur 16 cœurs
+python controle_cj.py          # sensibilité au seul paramètre non sourcé
+python genere_page_pertes.py   # assemble pertes-3d.html
+```
+
+Les CSV de résultats et les `.asc`/`.cir`/`.log`/`.raw` intermédiaires ne
+sont pas versionnés (régénérables) — seuls les scripts, les PNG finaux et
+`pertes-3d.html` le sont.

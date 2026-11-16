@@ -12,3 +12,6 @@ results/
 # Python
 __pycache__/
 *.pyc
+
+# Netlists generees par les scripts -- regenerables
+*.cir

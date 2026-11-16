@@ -26,6 +26,7 @@ aveugle dans l'un ou l'autre.
 |---|---|---|
 | 1 | [Fréquence de découpage et choix d'inductance](01-frequence-inductance/) | ✅ fait |
 | 2 | [Technologie switch/diode (Si vs GaN, Schottky vs ultrafast)](02-mosfet-diode/) | ✅ fait |
+| 2b | [… étendu 200-800 kHz : calibre vs technologie](02-mosfet-diode/#11-extension-200-800-khz--le-calibre-avant-la-technologie) | ✅ fait |
 | 3 | Condensateurs d'entrée et de sortie | à venir |
 | 4 | Synthèse avec composants réels (bilan final) | à venir |
 
