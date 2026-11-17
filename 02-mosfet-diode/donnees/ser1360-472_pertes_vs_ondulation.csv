@@ -1,0 +1,6 @@
+Ripple Current,Frequency,IDC,Temperature,,,,,,,,
+1 (A) - 3 (A),400 (kHz),2 (A),25 (°C),,,,,,,,
+,,,,,,,,,,,
+Part Number,SER1360-472,,,,,,,,,,
+Ripple Current,1,"1,2","1,4","1,6","1,8",2,"2,2","2,4","2,6","2,8",3
+Total Losses,40,48,58,70,83,98,114,132,152,174,197

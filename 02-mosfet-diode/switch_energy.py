@@ -203,6 +203,18 @@ POWERLAW_TABLE = {
         coss_er_f=227e-12,  # PUBLIE -> sert de controle de la methode
         src="datasheet EPC EPC2052 rev. 2022-09-26 p.2 Dynamic Characteristics (typ)",
     ),
+    # GaN 200 V, revise 12 janvier 2026 -- la piece retenue pour
+    # l'architecture 1 du chapitre 3, apres que le balayage de tenue en
+    # tension a montre l'EPC2007C (100 V) hors calibre : il faut >= 123 V
+    # a 5 nH de maille et >= 189 V a 40 nH.
+    # ATTENTION : ce datasheet tabule a VDS = 100 V, pas 50 V (EPC tabule a
+    # 50 % du BVDSS). D'ou vref_v.
+    "EPC2207": dict(
+        tech="GaN", rds_ohm=0.022, vref_v=100.0,
+        coss50_f=130e-12, qoss50_c=23.0e-9, qg_c=4.5e-9, vgs=5.0, qgd_c=0.70e-9,
+        coss_er_f=186e-12,  # PUBLIE -> second controle de la methode
+        src="datasheet EPC EPC2207 rev. 12-Jan-2026 p.2 Dynamic Characteristics (typ)",
+    ),
     # Si haute performance, mais TRES SURDIMENSIONNE pour ce convertisseur
     # (7 mOhm / 80 A la ou l'optimum est a ~61 mOhm / 2 A). Retenu
     # precisement pour chiffrer ce que coute un mauvais calibre : voir
@@ -227,10 +239,21 @@ def fiche(part: str) -> dict:
     return GRAPH_TABLE[part] if part in GRAPH_TABLE else POWERLAW_TABLE[part]
 
 
+def vref(part: str) -> float:
+    """Tension a laquelle Coss et Qoss sont tabules sur CE datasheet.
+
+    50 V pour les pieces 100 V (EPC2007/2007C/2052, BSC070N10NS5), mais
+    100 V pour l'EPC2207 : EPC tabule a 50 % du BVDSS, pas a une tension
+    fixe. Coder 50 en dur donnerait un gamma faux d'un facteur 2 sur les
+    pieces 200 V -- d'ou ce champ explicite.
+    """
+    return POWERLAW_TABLE[part].get("vref_v", 50.0)
+
+
 def gamma_gan(part: str) -> float:
-    """gamma tel que Coss(v) = Coss(50)*(50/v)^gamma, deduit de Qoss=∫Coss."""
-    d = POWERLAW_TABLE[part]
-    return 1.0 - d["coss50_f"] * 50.0 / d["qoss50_c"]
+    """gamma tel que Coss(v) = Coss(Vref)*(Vref/v)^gamma, deduit de Qoss=∫Coss."""
+    d, vr = POWERLAW_TABLE[part], vref(part)
+    return 1.0 - d["coss50_f"] * vr / d["qoss50_c"]
 
 
 def fom(part: str, vds: float = 80.0) -> float:
@@ -269,8 +292,38 @@ def eoss(part: str, vds: float) -> float:
     if part in GRAPH_TABLE:
         d = GRAPH_TABLE[part]
         return _integ(d["v"], d["coss"], vds, 1)
-    d, g = POWERLAW_TABLE[part], gamma_gan(part)
-    return d["coss50_f"] * 50.0**g * vds ** (2 - g) / (2 - g)
+    d, g, vr = POWERLAW_TABLE[part], gamma_gan(part), vref(part)
+    return d["coss50_f"] * vr**g * vds ** (2 - g) / (2 - g)
+
+
+def eoss_ancree(part: str, vds: float) -> float:
+    """Eoss en privilegiant le Coss_ER PUBLIE quand il existe.
+
+    POURQUOI CE SECOND CHEMIN. La loi de puissance est ajustee sur le
+    couple (Coss, Qoss), donc sur la CHARGE. Rien ne garantit qu'elle
+    restitue l'ENERGIE, qui pondere la courbe par v et depend donc surtout
+    du haut de la plage. Le controle le montre : sur l'EPC2052 la loi tombe
+    a -1,8 % du Coss_ER publie, mais sur l'EPC2207 elle manque de -10,7 %
+    tout en reproduisant le Coss_TR a -1,7 %. Charge juste, energie fausse.
+
+    Quand le datasheet publie Coss_ER, on ancre donc l'energie dessus --
+    Eoss(Vref) = 1/2 Coss_ER Vref^2, exact par definition du Coss_ER -- et
+    on ne se sert de la loi de puissance que pour la FORME, c'est-a-dire
+    pour transporter cette energie de Vref a vds.
+
+    Sans Coss_ER publie, retombe sur eoss().
+    """
+    d = POWERLAW_TABLE.get(part)
+    if d is None or not d.get("coss_er_f"):
+        return eoss(part, vds)
+    vr, g = vref(part), gamma_gan(part)
+    e_vref = 0.5 * d["coss_er_f"] * vr**2
+    return e_vref * (vds / vr) ** (2 - g)
+
+
+def fom_ancree(part: str, vds: float = 80.0) -> float:
+    """FOM calculee sur eoss_ancree -- a preferer quand Coss_ER est publie."""
+    return eoss_ancree(part, vds) * fiche(part)["rds_ohm"]
 
 
 def qoss(part: str, vds: float) -> float:
@@ -278,8 +331,77 @@ def qoss(part: str, vds: float) -> float:
     if part in GRAPH_TABLE:
         d = GRAPH_TABLE[part]
         return _integ(d["v"], d["coss"], vds, 0)
-    d, g = POWERLAW_TABLE[part], gamma_gan(part)
-    return d["coss50_f"] * 50.0**g * vds ** (1 - g) / (1 - g)
+    d, g, vr = POWERLAW_TABLE[part], gamma_gan(part), vref(part)
+    return d["coss50_f"] * vr**g * vds ** (1 - g) / (1 - g)
+
+
+def coss_rds(part: str) -> tuple[float, float]:
+    """Produit Coss x Rds, en pF.Ohm, et la tension a laquelle il vaut.
+
+    POURQUOI CE PRODUIT. Coss est proportionnelle a la surface de puce,
+    Rds lui est inversement proportionnelle : leur produit l'elimine. Comme
+    le FOM (Eoss x Rds), c'est donc une grandeur de TECHNOLOGIE et non de
+    calibre -- mais obtenue a partir d'une SEULE valeur de Coss, la ligne
+    de catalogue, sans avoir besoin de la courbe entiere ni du Coss_ER.
+    C'est le seul controle praticable avant d'avoir les datasheets.
+
+    A QUOI IL SERT VRAIMENT : verifier que plusieurs calibres annonces
+    appartiennent bien a UNE MEME famille. Trois calibres d'une meme
+    famille donnent le meme produit a ~20 % pres. Exemple mesure sur un
+    catalogue 150-200 V : 40 mOhm/130 pF -> 5.20, 30 mOhm/150 pF -> 4.50,
+    20 mOhm/220 pF -> 4.40 pF.Ohm, soit 18 % d'ecart -- meme technologie,
+    trois tailles de puce.
+
+    A QUOI IL NE SERT PAS : classer des technologies. Verifie sur les six
+    pieces du depot tabulees a 50 V, la correlation de rang avec le FOM
+    n'est que de rho = 0.83 ; l'EPC2007 y ressort 7e sur ce produit alors
+    qu'il est 4e au FOM. Le produit ignore la FORME de Coss(V), or c'est
+    elle qui decide de l'energie -- un Si a genou marque et un GaN plat
+    peuvent afficher le meme produit et differer de 25 % en Eoss. Pour
+    comparer des technologies, utiliser fom_ancree().
+
+    PRECONDITION ABSOLUE : tous les Coss compares doivent etre tabules a
+    la MEME tension. EPC tabule a 50 % du BVDSS, soit 50 V sur ses pieces
+    100 V mais 100 V sur l'EPC2207 -- comparer les deux sans le voir donne
+    un facteur deux. D'ou le renvoi de la tension avec la valeur, et le
+    refus de `coherence_famille` de melanger deux references.
+    """
+    d = fiche(part)
+    if part in POWERLAW_TABLE:
+        vr, coss = vref(part), d["coss50_f"]
+    else:
+        vr = 50.0
+        coss = float(np.interp(vr, np.asarray(d["v"]), np.asarray(d["coss"])))
+    return coss * d["rds_ohm"] * 1e12, vr
+
+
+def coherence_famille(pieces: list[tuple[float, float]],
+                      seuil: float = 0.25) -> dict:
+    """Plusieurs calibres sont-ils d'une meme famille ?
+
+    `pieces` est une liste de couples (rds_ohm, coss_F) lus sur un
+    catalogue, TOUS a la meme tension de tabulation -- la fonction ne peut
+    pas le verifier, c'est a l'appelant de s'en assurer.
+
+    Renvoie la dispersion du produit et un verdict. Au-dela de `seuil`
+    (25 % par defaut), il s'agit vraisemblablement de trois GENERATIONS
+    differentes, pas de trois tailles d'une meme puce.
+
+    CE QU'IL DISCRIMINE EXACTEMENT -- mesure sur les trois Si 100 V du
+    depot, qui viennent de trois fabricants :
+        RD3P04BBK  (ROHM)              3.51 pF.Ohm
+        FDT86113LZ (onsemi)            3.49 pF.Ohm
+        BSC070N10NS5 (Infineon)        2.38 pF.Ohm
+    Les deux premiers concordent a 0.6 % MALGRE des fabricants differents,
+    et c'est le troisieme qui s'ecarte de 32 %. Le produit ne trie donc
+    pas par marque mais par GENERATION technologique : l'OptiMOS est
+    simplement plus recent. C'est coherent avec le FOM, qui classe lui
+    aussi le BSC070N10NS5 premier des cinq (8.2 nJ.Ohm).
+    """
+    prods = [rds * coss * 1e12 for rds, coss in pieces]
+    disp = max(prods) / min(prods) - 1.0
+    return dict(produits=prods, min=min(prods), max=max(prods),
+                dispersion=disp, meme_famille=disp <= seuil)
 
 
 def p_gate(part: str, fsw: float) -> float:

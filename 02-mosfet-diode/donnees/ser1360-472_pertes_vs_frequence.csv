@@ -1,0 +1,6 @@
+Frequency,Ripple Current,IDC,Temperature,,,,,,,,
+400 (kHz) - 800 (kHz),2 (A),2 (A),25 (°C),,,,,,,,
+,,,,,,,,,,,
+Part Number,SER1360-472,,,,,,,,,,
+Frequency,400,440,480,520,560,600,640,680,720,760,800
+Total Losses,98,105,113,123,134,146,157,169,180,192,203

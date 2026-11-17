@@ -1,0 +1,31 @@
+Search Type,Temperature,Volt Time (V-µsec),,,,,,,,,,
+Compare Losses,25,"37,5",,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 1,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER2211,"5,3",400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 2,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER2211,3,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 3,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1360,8,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 4,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1360,6,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 5,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1360,"4,7",400,,,,,,,,,,
+,,,,,,,,,,,,
+Part Number,L nominal (µH),Isat (A),Irms (A),Temp. rating,Length (mm),Width (mm),Height (mm),Mount,Shielded,Core material,AEC grade,Price (€)
+SER2211-532,"5,3",19,26,125,"22,5","19,2","10,5",SM,Yes,Ferrite,,$2.78
+SER2211-302,3,"27,5",35,125,"22,5","19,2","10,5",SM,Yes,Ferrite,,$2.78
+SER1360-802,8,9,"7,6",125,13,"12,9","5,8",SM,Yes,Ferrite,3,$0.80
+SER1360-602,6,"9,5","9,4",125,13,"12,9","5,8",SM,Yes,Ferrite,3,$0.80
+SER1360-472,"4,7",12,"9,4",125,13,"12,9","5,8",SM,Yes,Ferrite,3,$0.80
+,,,,,,,,,,,,
+Link to results page: ,https://www.coilcraft.com/en-us/tools/power-inductor-finder/#/?S%5BsearchType%5D=2&S%5Btemp%5D=25&S%5BO%5D%5B0%5D%5BS%5D=SER2211&S%5BO%5D%5B0%5D%5BI%5D=5.3&S%5BO%5D%5B0%5D%5BP%5D=SER2211-532&S%5BO%5D%5B0%5D%5BC%5D=3%2C4.5%2C3%2C100%2Cidc%2CA&S%5BO%5D%5B0%5D%5BF%5D=400kHz&S%5BO%5D%5B1%5D%5BS%5D=SER2211&S%5BO%5D%5B1%5D%5BI%5D=3&S%5BO%5D%5B1%5D%5BP%5D=SER2211-302&S%5BO%5D%5B1%5D%5BC%5D=3%2C4.5%2C3%2C100%2Cidc%2CA&S%5BO%5D%5B1%5D%5BF%5D=400kHz&S%5BO%5D%5B2%5D%5BS%5D=SER1360&S%5BO%5D%5B2%5D%5BI%5D=8&S%5BO%5D%5B2%5D%5BP%5D=SER1360-802&S%5BO%5D%5B2%5D%5BC%5D=3%2C4.5%2C3%2C100%2Cidc%2CA&S%5BO%5D%5B2%5D%5BF%5D=400kHz&S%5BO%5D%5B3%5D%5BS%5D=SER1360&S%5BO%5D%5B3%5D%5BI%5D=6&S%5BO%5D%5B3%5D%5BP%5D=SER1360-602&S%5BO%5D%5B3%5D%5BC%5D=3%2C4.5%2C3%2C100%2Cidc%2CA&S%5BO%5D%5B3%5D%5BF%5D=400kHz&S%5BO%5D%5B4%5D%5BS%5D=SER1360&S%5BO%5D%5B4%5D%5BI%5D=4.7&S%5BO%5D%5B4%5D%5BP%5D=SER1360-472&S%5BO%5D%5B4%5D%5BC%5D=3%2C4.5%2C3%2C100%2Cidc%2CA&S%5BO%5D%5B4%5D%5BF%5D=400kHz&S%5Bisfp%5D=false&S%5Bvt%5D=37.5V-%C2%B5sec&RT=1&E=1,,,,,,,,,,,

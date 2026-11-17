@@ -1,0 +1,36 @@
+Search Type,Temperature,Volt Time (V-µsec),,,,,,,,,,
+Compare Losses,25,"37,5",,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 1,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER2211,47,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 2,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER2211,33,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 3,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER2211,27,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 4,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1390,47,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 5,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1390,33,400,,,,,,,,,,
+,,,,,,,,,,,,
+Operating Condition 6,,,,,,,,,,,,
+Series,Inductance,Frequency (kHz),,,,,,,,,,
+SER1390,22,400,,,,,,,,,,
+,,,,,,,,,,,,
+Part Number,L nominal (µH),Isat (A),Irms (A),Temp. rating,Length (mm),Width (mm),Height (mm),Mount,Shielded,Core material,AEC grade,Price (€)
+SER2211-473,47,"5,6","10,6",125,"22,5","19,2","10,5",SM,Yes,Ferrite,,$2.78
+SER2211-333,33,"8,3","10,6",125,"22,5","19,2","10,5",SM,Yes,Ferrite,,$2.78
+SER2211-273,27,"8,9","13,1",125,"22,5","19,2","10,5",SM,Yes,Ferrite,,$2.78
+SER1390-473,47,"3,2","7,7",125,13,"12,9",9,SM,Yes,Ferrite,3,$1.49
+SER1390-333,33,"4,8","7,7",125,13,"12,9",9,SM,Yes,Ferrite,3,$1.49
+SER1390-223,22,"7,4","7,7",125,13,"12,9",9,SM,Yes,Ferrite,3,$1.49
+,,,,,,,,,,,,
+Link to results page: ,https://www.coilcraft.com/en-us/tools/power-inductor-finder/#/?S%5BsearchType%5D=2&S%5Btemp%5D=25&S%5BO%5D%5B0%5D%5BS%5D=SER2211&S%5BO%5D%5B0%5D%5BI%5D=47&S%5BO%5D%5B0%5D%5BP%5D=SER2211-473&S%5BO%5D%5B0%5D%5BC%5D=2.6%2C3%2C0.8%2C31%2Cipeak%2CA&S%5BO%5D%5B0%5D%5BF%5D=400kHz&S%5BO%5D%5B1%5D%5BS%5D=null&S%5BO%5D%5B1%5D%5BI%5D=33&S%5BO%5D%5B1%5D%5BP%5D=SER2211-333&S%5BO%5D%5B1%5D%5BC%5D=2.5%2C3%2C1.15%2C46%2Cipeak%2CA&S%5BO%5D%5B1%5D%5BF%5D=400kHz&S%5BO%5D%5B2%5D%5BS%5D=null&S%5BO%5D%5B2%5D%5BI%5D=27&S%5BO%5D%5B2%5D%5BP%5D=SER2211-273&S%5BO%5D%5B2%5D%5BC%5D=2.25%2C3%2C1.5%2C67%2Cipeak%2CA&S%5BO%5D%5B2%5D%5BF%5D=400kHz&S%5BO%5D%5B3%5D%5BS%5D=null&S%5BO%5D%5B3%5D%5BI%5D=47&S%5BO%5D%5B3%5D%5BP%5D=SER1390-473&S%5BO%5D%5B3%5D%5BC%5D=2.6%2C3%2C0.8%2C31%2Cipeak%2CA&S%5BO%5D%5B3%5D%5BF%5D=400kHz&S%5BO%5D%5B4%5D%5BS%5D=null&S%5BO%5D%5B4%5D%5BI%5D=33&S%5BO%5D%5B4%5D%5BP%5D=SER1390-333&S%5BO%5D%5B4%5D%5BC%5D=2.5%2C3%2C1.15%2C46%2Cipeak%2CA&S%5BO%5D%5B4%5D%5BF%5D=400kHz&S%5BO%5D%5B5%5D%5BS%5D=null&S%5BO%5D%5B5%5D%5BI%5D=22&S%5BO%5D%5B5%5D%5BP%5D=SER1390-223&S%5BO%5D%5B5%5D%5BC%5D=2.15%2C3%2C1.7%2C79%2Cipeak%2CA&S%5BO%5D%5B5%5D%5BF%5D=400kHz&S%5Bisfp%5D=false&S%5Bvt%5D=37.5V-%C2%B5sec&RT=1&E=1,,,,,,,,,,,
