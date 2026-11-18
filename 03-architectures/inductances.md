@@ -403,9 +403,123 @@ choix de composant ne le réduit en DCM.
 3. **Tout est à 25 °C.** Les pertes fer d'une ferrite varient notablement
    sur la plage de fonctionnement, et aucun de ces modèles ne porte de
    dépendance en température.
-4. **L'analyse de transition du §5 est analytique**, avec une résonance non
+4. **Les oscillogrammes sont approximatifs, et on sait pourquoi.** Lecture
+   d'expérience sur les formes d'onde du §9 : trois phases se distinguent —
+   transistor fermé sans oscillation, décharge de l'inductance avec une
+   sonnerie haute fréquence amortie, puis à courant nul une **oscillation
+   basse fréquence qui ne s'amortit pas**. Cette dernière est un défaut du
+   modèle, pas du circuit — **confirmé par simulation**, voir §10.
+   Correctif traité en étape A du [chapitre 4](../04-emi/plan.md).
+5. **L'analyse de transition du §5 est analytique**, avec une résonance non
    amortie et un C constant, alors que le C_oss du GaN est fortement non
    linéaire. À confirmer en transitoire.
+
+## 10. Amortissement du temps mort — mesuré
+
+Levée de la réserve 4 du §8. Banc : `02-mosfet-diode/test_amortissement.py`,
+un seul point (20 V → 80 V, 400 kHz, D = 0,3347, 15 W), cinq variantes
+d'inductance et **rien d'autre qui change**. Figures dans
+`02-mosfet-diode/illustrations/amortissement/`.
+
+### Ce que l'oscillogramme montrait
+
+Trois phases, conformes à la lecture d'expérience : transistor fermé sans
+oscillation ; transistor ouvert, décharge avec une salve amortie à
+**88–89 MHz** (inductance de maille contre $C_{oss}$ et $C_j$) ; puis à
+courant nul une oscillation à **3,73 MHz** (inductance principale contre les
+mêmes capacités). Les deux diffèrent d'un facteur 24 : **ce sont deux
+circuits, pas deux harmoniques du même.**
+
+![Oscillogramme mesuré sur deux périodes, dix-sept relevés](../02-mosfet-diode/illustrations/amortissement/01-temps-plein.png)
+
+Les grandeurs sont **relevées sur la trace**, pas recopiées d'une formule :
+pentes ajustées sur les rampes, palier pris en médiane sur l'intervalle de
+conduction de la diode, amplitudes de sonnerie issues d'une détection de
+crêtes. Les pentes mesurées — 4,25 et −12,85 A/µs — valident les 4,26 et
+−12,77 attendus, l'écart sur la descente étant la chute de la diode, absente
+de la formule.
+
+Deux chiffres à retenir pour le [chapitre 4](../04-emi/plan.md) : la tension
+**à l'allumage vaut 30,3 V**, il n'y a donc pas de commutation à zéro de
+tension ; et le **dV/dt à la coupure atteint 14,7 V/ns**, qui est la source
+du mode commun.
+
+![Zoom sur l'intervalle à courant nul, cinq variantes](../02-mosfet-diode/illustrations/amortissement/02-zoom-temps-mort.png)
+
+Le tireté bleu — « DCR réelle + PkZ seule » — se superpose *exactement* au
+modèle constructeur en vert. C'est la preuve visuelle du point 1 ci-dessous.
+
+### Facteur de qualité, mesuré par sonnerie libre
+
+L'excitation est coupée (`Ncycles` de `PULSE`) et le circuit sonne 30 µs.
+
+| variante | τ | **Q** | chute observée |
+|---|---|---|---|
+| L idéale, DCR 1,7 mΩ *(banc actuel)* | 558 µs | **6 567** | ×1,1 — extrapolé |
+| DCR **réelle** 5,5 mΩ, ×3 | 172 µs | **2 030** | ×1,2 — extrapolé |
+| + **PkZ 1778 Ω en parallèle** | 1,32 µs | **16** | ×50 |
+| modèle constructeur SER1360-472_imp | **1,32 µs** | **16** | ×50 |
+| + snubber RC 180 Ω / 220 pF | 0,37 µs | 4 | ×36 |
+
+![Sonnerie libre et ajustement exponentiel de l'enveloppe](../02-mosfet-diode/illustrations/amortissement/06-sonnerie-libre.png)
+
+En échelle logarithmique, une droite est une exponentielle et sa pente donne
+Q. Le pointillé blanc n'est tracé que sur sa plage d'ajustement. La colonne
+« chute observée » du tableau est la garde-fou : à ×1,1, le τ annoncé est
+une extrapolation et non une mesure.
+
+Trois résultats, dont deux n'étaient pas prévus :
+
+1. **Tripler la résistance série ne change rien.** La DCR n'est pas le
+   mécanisme. Les lignes 3 et 4 sont **identiques au chiffre près** : tout
+   l'amortissement tient à la seule résistance parallèle.
+2. τ passe de 220 périodes de découpage à **1,32 µs, soit moins que le temps
+   mort** (1,4 µs). L'oscillation s'éteint dans la période.
+3. **Un snubber RC coûterait 509 mW** — 35 % du budget de pertes total
+   (1 438 mW). Il est inutile : le composant réel s'amortit tout seul.
+
+### Effet au-delà de l'allure de la courbe
+
+À rapport cyclique **identique**, la puissance de sortie passe de 16,34 W
+(idéale) à 14,95 W (constructeur) : **9 % d'écart**. L'artefact ne faussait
+pas que l'esthétique.
+
+### Correction d'un chiffre publié
+
+La réserve 4 annonçait *Q ≈ 100 000 contre 4,3, facteur 20 000*. C'était une
+estimation de tête à partir du seul DCR. **Le rapport mesuré est de 400**
+(6 567 → 16) : le GaN, la diode et leurs résistances d'accès dissipent aussi.
+La conclusion tient, l'ordre de grandeur non.
+
+### Et le modèle de la SER2013-472 n'existe pas
+
+**Coilcraft ne publie aucun modèle SPICE pour la SER2013-472** — la famille
+s'arrête à 2,0 µH (`SER20XX.lib` : -681, -801, -901, -102, -122, -202). Le
+fichier utilisé jusqu'ici était une reconstruction faite à la main, dont
+seule la DCR venait du catalogue.
+
+![Impédance propre des variantes d'inductance](../02-mosfet-diode/illustrations/amortissement/05-impedance-inductance.png)
+
+La cause en une courbe — et le moyen de démasquer un modèle fabriqué. Le
+modèle discret culmine à plus de 1,1 MΩ à sa résonance ; le balayage, même
+à 3 000 points par décade, n'en touche pas le sommet. Le modèle constructeur
+culmine à 1 300 Ω. **Aucun composant de puissance réel ne dépasse quelques
+kΩ à sa résonance propre** : au-delà, c'est le modèle qui parle.
+
+Deux conséquences sur les tableaux §3 et §7 :
+
+- la colonne **« modèle SPICE publié : oui »** de la SER2013-472 est
+  **fausse** — elle est dans le même cas que la SER2915, écartée pour ce
+  motif ;
+- la **résonance propre de 27,1 MHz** qui lui est attribuée sort de ce
+  fichier reconstruit. Elle n'est pas opposable. Celle de la SER1360-472
+  (33,9 MHz) est confirmée par balayage AC du modèle constructeur : 34,3 MHz.
+
+Le banc ci-dessus utilise donc la **SER1360-472**, seul 4,7 µH de la gamme
+SER modélisé, comme **substitut documenté pour la question de
+l'amortissement** — les deux familles partagent le matériau de noyau (§4).
+Le choix de composant du §7 reposait sur la thermique et le volume, qui
+restent valides ; **l'argument « modèle disponible » doit en être retiré.**
 
 ## Reproduire
 

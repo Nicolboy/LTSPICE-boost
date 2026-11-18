@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amortissement du temps mort — banc de test</title>
+<style>
+  :root{
+    --fond:#101317; --carte:#171b21; --bord:#262c35;
+    --encre:#e8eaed; --doux:#9aa4b0; --accent:#51cf66; --alerte:#ff6b6b;
+    --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fond);color:var(--encre);
+       font:16px/1.65 -apple-system,"Segoe UI",Roboto,sans-serif;
+       padding:2.5rem 1.5rem 5rem}
+  main{max-width:1280px;margin:0 auto}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 .4rem;letter-spacing:-.02em}
+  .sous{color:var(--doux);margin:0 0 2.5rem;font-size:1.05rem}
+  h2{font-size:1.25rem;margin:3rem 0 .5rem;padding-top:1.2rem;
+     border-top:1px solid var(--bord);letter-spacing:-.01em}
+  .lire{color:var(--doux);margin:.2rem 0 1rem;font-size:.95rem;max-width:90ch}
+  figure{margin:0 0 1rem}
+  img{width:100%;height:auto;display:block;border:1px solid var(--bord);
+      border-radius:8px;background:#14171b}
+  a.plein{display:inline-block;margin-top:.5rem;color:var(--accent);
+          font-size:.88rem;text-decoration:none;font-family:var(--mono)}
+  a.plein:hover{text-decoration:underline}
+  .verdict{background:var(--carte);border:1px solid var(--bord);
+           border-left:3px solid var(--accent);border-radius:8px;
+           padding:1.1rem 1.4rem;margin:0 0 2rem}
+  .verdict p{margin:.4rem 0}
+  .tableau{overflow-x:auto;margin:1rem 0 2rem}
+  table{border-collapse:collapse;width:100%;font-size:.92rem;
+        font-variant-numeric:tabular-nums}
+  th,td{padding:.55rem .8rem;text-align:right;border-bottom:1px solid var(--bord)}
+  th:first-child,td:first-child{text-align:left}
+  thead th{color:var(--doux);font-weight:600;font-size:.82rem;
+           text-transform:uppercase;letter-spacing:.05em}
+  tbody tr.cle{background:rgba(81,207,102,.07)}
+  tbody tr.cle td{color:var(--encre);font-weight:600}
+  .mono{font-family:var(--mono);font-size:.9em}
+  .alerte{color:var(--alerte)}
+  .ok{color:var(--accent)}
+  footer{margin-top:4rem;padding-top:1.2rem;border-top:1px solid var(--bord);
+         color:var(--doux);font-size:.88rem}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Amortissement de l'oscillation de temps mort</h1>
+<p class="sous">Boost DCM 20 V → 80 V, 400 kHz, D&nbsp;=&nbsp;0,3347, ≈15 W —
+cinq variantes d'inductance, un seul point de fonctionnement, rien d'autre
+qui change.</p>
+
+<div class="verdict">
+<p><strong>L'oscillation basse fréquence non amortie est un défaut du
+modèle, pas du circuit.</strong></p>
+<p>Elle disparaît dès que l'inductance porte sa résistance
+<strong>parallèle</strong> — pertes fer et effet de peau. Tripler la
+résistance <em>série</em> ne change rien.</p>
+<p>τ passe de 558&nbsp;µs (220 périodes de découpage) à
+<strong>1,32&nbsp;µs</strong>, soit moins que la durée du temps mort :
+l'oscillation s'éteint dans la période. <strong>Aucun snubber n'est
+nécessaire</strong> — et il coûterait 509&nbsp;mW, 35&nbsp;% du budget de
+pertes.</p>
+</div>
+
+<h2>Mesures</h2>
+<div class="tableau">
+<table>
+<thead><tr>
+  <th>variante d'inductance</th><th>P<sub>out</sub></th><th>f<sub>BF</sub></th>
+  <th>f<sub>HF</sub></th><th>τ</th><th>Q</th><th>chute observée</th>
+  <th>coût</th>
+</tr></thead>
+<tbody>
+<tr><td>L idéale, DCR 1,7 mΩ <span class="mono">(banc actuel)</span></td>
+    <td>16,34 W</td><td>3,77 MHz</td><td>88,0 MHz</td><td>558 µs</td>
+    <td class="alerte">6 567</td><td class="mono">×1,1 extrapolé</td><td>—</td></tr>
+<tr><td>DCR <em>réelle</em> 5,5 mΩ seule</td>
+    <td>16,09 W</td><td>3,76 MHz</td><td>89,1 MHz</td><td>172 µs</td>
+    <td class="alerte">2 030</td><td class="mono">×1,2 extrapolé</td><td>—</td></tr>
+<tr><td>+ PkZ 1778 Ω en parallèle</td>
+    <td>14,95 W</td><td>3,73 MHz</td><td>89,1 MHz</td><td>1,32 µs</td>
+    <td class="ok">16</td><td class="mono">×50</td><td>—</td></tr>
+<tr class="cle"><td>modèle constructeur SER1360-472_imp</td>
+    <td>14,95 W</td><td>3,73 MHz</td><td>89,1 MHz</td><td>1,32 µs</td>
+    <td class="ok">16</td><td class="mono">×50</td><td>—</td></tr>
+<tr><td>+ snubber RC 180 Ω / 220 pF</td>
+    <td>14,39 W</td><td>3,08 MHz</td><td>88,5 MHz</td><td>0,37 µs</td>
+    <td>4</td><td class="mono">×36</td><td class="alerte">509 mW</td></tr>
+</tbody>
+</table>
+</div>
+<p class="lire">Les lignes 3 et 4 sont identiques au chiffre près : c'est la
+preuve que tout l'amortissement tient à la seule résistance parallèle.
+À rapport cyclique identique, la puissance de sortie varie de
+<strong>9 %</strong> entre le modèle idéal et le modèle réel — l'artefact ne
+faussait pas que l'allure de la courbe.</p>
+
+<h2>1 — Oscillogramme mesuré, 2 périodes, 17 relevés</h2>
+<p class="lire">Les trois phases attendues, avec les grandeurs
+<strong>relevées sur la trace</strong> et non recopiées d'une formule : les
+pentes de courant sont ajustées sur les rampes, le palier est une médiane
+sur l'intervalle de conduction de la diode, les amplitudes de sonnerie
+viennent d'une détection de crêtes. Les valeurs théoriques figurent à côté
+pour comparaison — pentes mesurées 4,25 et −12,85 A/µs contre 4,26 et
+−12,77 attendues.</p>
+<p class="lire">Deux chiffres à retenir au-delà de l'amortissement : la
+tension <strong>à l'allumage vaut 30,3 V</strong> ⑫ — il n'y a pas de
+commutation à zéro de tension — et le dV/dt à la coupure atteint
+<strong>14,7 V/ns</strong> ⑰, ce qui pèsera sur le mode commun au
+chapitre 4. La sonnerie décroît de ÷1,69 sur le temps mort ⑮→⑯ avec le
+modèle constructeur ; le rouge, lui, garde ses crêtes à 45,5 V.</p>
+<figure><img src="amortissement/01-temps-plein.png"
+  alt="Deux périodes, modèle idéal contre modèle constructeur">
+<a class="plein" href="amortissement/01-temps-plein.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>2 — Zoom sur l'intervalle à courant nul</h2>
+<p class="lire">La figure à utiliser pour mesurer à la règle : grille mineure
+active, une période de l'oscillation vaut 268 ns. Le tireté bleu est la
+variante « DCR réelle + PkZ seule » — elle se superpose <em>exactement</em>
+au modèle constructeur en vert, d'où le tracé en tireté, sans quoi elle
+disparaîtrait dessous.</p>
+<figure><img src="amortissement/02-zoom-temps-mort.png"
+  alt="Zoom sur le temps mort, cinq variantes">
+<a class="plein" href="amortissement/02-zoom-temps-mort.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>3 — Contenu fréquentiel</h2>
+<p class="lire">En haut, l'amplitude à chaque harmonique de 400 kHz : pour un
+signal périodique c'est le seul contenu réel, tracer tous les bins
+noircissait la figure. En bas, le spectre du <em>seul</em> intervalle à
+courant nul, où la raie de temps mort est isolée — l'amortissement la baisse
+de 3 dB et rabote ses harmoniques de 5 à 10 dB.</p>
+<figure><img src="amortissement/03-fft.png"
+  alt="Peigne d'harmoniques et spectre du temps mort">
+<a class="plein" href="amortissement/03-fft.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>4 — FFT court terme</h2>
+<p class="lire">Où vit chaque raie dans la période. La ligne à 88 MHz à
+l'instant de la coupure, et la bande à 3,7 MHz qui occupe tout le temps
+mort. En bas, elle <strong>pâlit</strong> avant l'allumage suivant ; en
+haut, elle reste franche. Fenêtre de 410 ns, Δf = 2,4 MHz : la fréquence
+exacte se lit sur la figure 3, pas ici.</p>
+<figure><img src="amortissement/04-fft-court-terme.png"
+  alt="Spectrogrammes comparés">
+<a class="plein" href="amortissement/04-fft-court-terme.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>5 — Impédance propre de l'inductance</h2>
+<p class="lire">La cause, en une courbe. Le modèle discret culmine à plus de
+1,1 MΩ à sa résonance — le balayage ne touche même pas le sommet. Le modèle
+constructeur culmine à 1 300 Ω. <em>Aucun composant de puissance réel ne
+dépasse quelques kΩ&nbsp;:</em> au-delà, c'est le modèle qui parle.</p>
+<figure><img src="amortissement/05-impedance-inductance.png"
+  alt="Impédance des variantes d'inductance">
+<a class="plein" href="amortissement/05-impedance-inductance.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>6 — Sonnerie libre : la mesure de Q</h2>
+<p class="lire">L'excitation est coupée et le circuit sonne 30 µs. Un Q
+ajusté sur le seul temps mort n'est pas une mesure quand la décroissance n'y
+est que de 6 %. En bas, en échelle logarithmique, une droite est une
+exponentielle et sa pente donne Q. Le pointillé blanc n'est tracé que sur sa
+plage d'ajustement.</p>
+<figure><img src="amortissement/06-sonnerie-libre.png"
+  alt="Décroissance libre et ajustement exponentiel">
+<a class="plein" href="amortissement/06-sonnerie-libre.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>7 — Waterfall isométrique</h2>
+<p class="lire">Deux périodes de trace, <strong>quatorze tranches d'une
+période entière chacune</strong>, glissant de 192 ns. La fenêtre se déplace
+donc <em>à l'intérieur</em> de la période de découpage : ce qui bouge d'une
+tranche à l'autre est porté par la portion de cycle qui entre et sort de la
+fenêtre. En deçà d'une période par tranche, le fondamental ne serait plus
+résolu et le spectre ne décrirait que le découpage imposé.
+<strong>La couleur porte l'amplitude</strong> (échelle à droite) ; le rang
+de la tranche se lit à la profondeur.</p>
+<p class="lire">Le glissement total vaut exactement une période : la 1ʳᵉ et
+la 14ᵉ tranche sont donc à la même phase et <strong>doivent coïncider</strong>
+sur un régime périodique — contrôle de cohérence porté par la figure
+elle-même. C'est le cas dans les deux variantes : l'allumage court-circuite
+le nœud et réarme la résonance à phase identique à chaque cycle. La
+différence entre les deux est ailleurs — avec le modèle constructeur, les
+creux entre 3 et 10 MHz sont nettement moins profonds et la bande au-delà
+de 70 MHz est plus lisse.</p>
+<figure><img src="amortissement/07-waterfall-ideal.png"
+  alt="Waterfall, modèle idéal">
+<a class="plein" href="amortissement/07-waterfall-ideal.png">ouvrir en pleine résolution ↗</a></figure>
+<figure><img src="amortissement/07-waterfall-constructeur.png"
+  alt="Waterfall, modèle constructeur">
+<a class="plein" href="amortissement/07-waterfall-constructeur.png">ouvrir en pleine résolution ↗</a></figure>
+
+<h2>Réserve sur le composant</h2>
+<p class="lire">Ce banc utilise la <strong>SER1360-472</strong> et non la
+SER2013-472 retenue au chapitre 3 : <strong>Coilcraft ne publie aucun modèle
+pour la SER2013-472</strong>, cette famille s'arrêtant à 2,0 µH. La
+SER1360-472 est le seul 4,7 µH de la gamme SER modélisé, et sert ici de
+substitut documenté pour la seule question de l'amortissement — les deux
+familles partageant le matériau de noyau. Conséquence pour le chapitre 3 :
+la mention « modèle SPICE publié&nbsp;: oui » et la résonance propre de
+27,1 MHz attribuées à la SER2013-472 doivent être retirées.</p>
+
+<footer>
+Banc&nbsp;: <span class="mono">02-mosfet-diode/test_amortissement.py</span>,
+<span class="mono">analyse_amortissement.py</span>,
+<span class="mono">run_amortissement.py</span> ·
+récapitulatif&nbsp;: <span class="mono">results/amortissement/recapitulatif.txt</span> ·
+méthode&nbsp;: skills <span class="mono">oscillogrammes</span> et
+<span class="mono">spectrogrammes</span>
+</footer>
+
+</main>
+</body>
+</html>
