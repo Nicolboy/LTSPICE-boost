@@ -512,14 +512,92 @@ Deux conséquences sur les tableaux §3 et §7 :
   **fausse** — elle est dans le même cas que la SER2915, écartée pour ce
   motif ;
 - la **résonance propre de 27,1 MHz** qui lui est attribuée sort de ce
-  fichier reconstruit. Elle n'est pas opposable. Celle de la SER1360-472
-  (33,9 MHz) est confirmée par balayage AC du modèle constructeur : 34,3 MHz.
+  fichier reconstruit. Elle n'est pas opposable — et elle est fausse : **le
+  datasheet annonce 30 MHz typ**, soit 10 % au-dessus. La capacité propre
+  inventée (7,40 pF) dépasse de 24 % celle que L et la SRF imposent
+  (5,99 pF). Voir §11.
+
+> **Correction d'une affirmation de ce chapitre.** J'ai d'abord écrit que le
+> datasheet de la SER2013-472 ne publiait pas de résonance propre. C'est
+> faux : je l'avais conclu d'un export CSV du *Power Inductor Finder*, qui
+> ne porte pas cette colonne, sans ouvrir le PDF. **Conclure d'une source
+> incomplète** — la même faute que celle qui avait produit le fichier
+> reconstruit.
 
 Le banc ci-dessus utilise donc la **SER1360-472**, seul 4,7 µH de la gamme
 SER modélisé, comme **substitut documenté pour la question de
 l'amortissement** — les deux familles partagent le matériau de noyau (§4).
 Le choix de composant du §7 reposait sur la thermique et le volume, qui
 restent valides ; **l'argument « modèle disponible » doit en être retiré.**
+
+## 11. Banc d'impédance — contrôler un modèle avant de s'en servir
+
+Suite directe du §10. Banc :
+`02-mosfet-diode/impedance_banc.py` et `run_impedance_blanc.py`, figures dans
+`02-mosfet-diode/illustrations/impedance/`.
+
+### La synthèse en forme fermée
+
+Würth et Coilcraft convergent sur la même topologie — $R_p \parallel C_p
+\parallel (R_s + L)$ — relevée sur **5 071 modèles** présents sur le disque.
+Ses quatre paramètres se déduisent de quatre nombres de catalogue, sans
+ajustement :
+
+$$\Large R_s = \mathrm{DCR} \qquad C_p = \frac{1}{L\,(2\pi f_{SRF})^2} \qquad R_p = |Z|_{crête}$$
+
+Validé sur la **SER1360-472**, seule 4,7 µH de la gamme ayant *à la fois* un
+datasheet et un modèle constructeur — donc une vérité terrain :
+
+| | écart |
+|---|---|
+| médian, 10 kHz – 100 MHz | **0,00 dB** |
+| maximum sous la résonance propre | **0,09 dB** |
+| maximum au-dessus | 1,71 dB |
+| aller-retour `.lib` ↔ forme fermée | **0,001 dB** |
+
+### L'abaque de Smith voit ce que le module laisse passer
+
+![Abaque de Smith, référence et modèle superposés](../02-mosfet-diode/illustrations/impedance/03-smith.png)
+
+Référence et modèle **superposés**, jamais juxtaposés. Au-delà de la
+résonance propre la référence **s'enroule vers l'intérieur** — les pertes de
+la résistance que Coilcraft place en série avec $C_p$, absente d'une
+topologie à quatre éléments — alors que la synthèse reste collée au cercle
+unité. Le même écart ne vaut que **1,7 dB** sur le tracé de module et y passe
+inaperçu. Contre toute attente, c'est la vue la plus sensible.
+
+### Ce que le datasheet détermine, et ce qu'il laisse ouvert
+
+![SER2013-472, indétermination sur l'amortissement](../02-mosfet-diode/illustrations/impedance/06-ser2013-indetermination.png)
+
+Le datasheet de la SER2013-472 publie **L, DCR et SRF** — trois paramètres
+sur quatre. **L'impédance de crête n'y figure pas**, et c'est elle qui porte
+l'amortissement. En l'encadrant par le corpus (1 078 – 15 844 Ω) :
+
+| | indétermination |
+|---|---|
+| sur $|Z|$, sous 1 MHz | **0,00 dB** |
+| sur $|Z|$, au sommet | 23,3 dB |
+| sur **Q à 3,73 MHz** | **facteur 15** |
+
+À 3,73 MHz — la fréquence de sonnerie du §10 — les courbes se confondent à
+0,5 % près **et pourtant Q y est indéterminé d'un facteur 15**. Sous la
+résonance, $|Z| \simeq \omega L$ quel que soit $R_p$ : la branche parallèle
+n'y pèse rien.
+
+> **Une courbe d'impédance ne contrôle pas un amortissement** — sauf si la
+> référence monte jusqu'à la résonance propre. Un « conforme » obtenu sur
+> une référence qui s'arrête au point de fonctionnement ne porte que sur $L$
+> et $R_s$. C'est exactement la configuration dans laquelle le fichier
+> reconstruit est passé.
+
+### Conséquence pour le choix du §7
+
+Un modèle SER2013-472 bâti sur son seul datasheet est **juste à 400 kHz** :
+le bilan de pertes du §7 n'est pas menacé. Il est **muet sur la sonnerie** à
+3,73 MHz, donc inutilisable tel quel pour le [chapitre 4](../04-emi/plan.md).
+Lever cette réserve demande une mesure d'impédance de la pièce, ou le modèle
+que Coilcraft ne publie pas.
 
 ## Reproduire
 
