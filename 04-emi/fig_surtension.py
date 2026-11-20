@@ -83,10 +83,8 @@ def _legende(ax, ou="lower right"):
         t.set_color("#e8eaed")
 
 
-def graphe_vitesse():
+def _trace_vitesse(ax, compact=False):
     """Surtension = f(vitesse de commutation), maille fixee a 20 nH."""
-    fig, ax = _cadre("Surtension inverse contre VITESSE DE COMMUTATION — "
-                     "$R_g$ de 1 à 47 Ω, maille fixée à 20 nH")
     for dio, nom, vbr, col, mk in DIO:
         xs, ys, ec, rgv = [], [], [], []
         for rg in RG:
@@ -108,7 +106,7 @@ def graphe_vitesse():
                             xytext=(8, (-14, 9, -14, 9, -14, 9)[k % 6]),
                             color=col, fontsize=8.6)
         else:
-            if ec.any():
+            if ec.any() and not compact:
                 ax.annotate("de 1 à 22 Ω — AUCUN EFFET." + chr(10)
                             + "Le di/dt de la coupure est celui du" + chr(10)
                             + "recouvrement de la diode, pas de la grille.",
@@ -127,17 +125,10 @@ def graphe_vitesse():
     ax.set_xlabel("di/dt mesuré à la coupure de la diode (A/ns)",
                   color="#e8eaed")
     _legende(ax, "lower right")
-    fig.subplots_adjust(left=.085, right=.975, top=.86, bottom=.085)
-    p = ILL / "surtension_vs_vitesse.png"
-    p.unlink(missing_ok=True)
-    fig.savefig(p, facecolor=fig.get_facecolor())
-    print("->", p.name)
 
 
-def graphe_maille():
+def _trace_maille(ax, compact=False):
     """Surtension = f(inductance de boucle), Rg fixe a 10 ohms."""
-    fig, ax = _cadre("Surtension inverse contre INDUCTANCE DE BOUCLE — "
-                     "2 à 40 nH, $R_g$ fixé à 10 Ω")
     for dio, nom, vbr, col, mk in DIO:
         xs, ys, ec, lv, dd = [], [], [], [], []
         for lb in LB:
@@ -177,8 +168,66 @@ def graphe_maille():
                 color="#9aa0a6", fontsize=9.2,
                 arrowprops=dict(arrowstyle="->", color="#9aa0a6", lw=1.2))
     _legende(ax, "upper left")
+
+
+T_VIT = ("Surtension inverse contre VITESSE DE COMMUTATION — "
+         "$R_g$ de 1 à 47 Ω, maille fixée à 20 nH")
+T_MAI = ("Surtension inverse contre INDUCTANCE DE BOUCLE — "
+         "2 à 40 nH, $R_g$ fixé à 10 Ω")
+
+
+def _ecrire(fig, nom):
     fig.subplots_adjust(left=.085, right=.975, top=.86, bottom=.085)
-    p = ILL / "surtension_vs_maille.png"
+    p = ILL / nom
+    p.unlink(missing_ok=True)
+    fig.savefig(p, facecolor=fig.get_facecolor())
+    print("->", p.name)
+
+
+def graphe_vitesse():
+    fig, ax = _cadre(T_VIT)
+    _trace_vitesse(ax)
+    _ecrire(fig, "surtension_vs_vitesse.png")
+
+
+def graphe_maille():
+    fig, ax = _cadre(T_MAI)
+    _trace_maille(ax)
+    _ecrire(fig, "surtension_vs_maille.png")
+
+
+def graphe_combine():
+    """Les deux cote a cote -- la vue d'un coup d'oeil, pour le README.
+
+    ELLE SORT DU MEME CODE que les deux figures separees. Une illustration
+    qu'un script ne regenere plus devient perimee au premier changement de
+    donnees : c'est exactement ainsi qu'elle etait devenue orpheline, et
+    c'est pour cela que je l'avais effacee au lieu de la remettre en ligne.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.style.use("dark_background")
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(15.5, 6.8), dpi=170)
+    fig.patch.set_facecolor("#15171c")
+    for a in (ax, bx):
+        a.set_facecolor("#15171c")
+        a.grid(True, which="both", color="#2c3038", lw=0.6, zorder=1)
+        a.tick_params(colors="#9aa0a6")
+        a.set_ylim(0, 170)
+    ax.set_ylabel("dépassement au-delà des 80 V de sortie (V)",
+                  color="#e8eaed")
+    _trace_vitesse(ax, compact=True)
+    _trace_maille(bx, compact=True)
+    ax.set_title("vitesse de commutation — $R_g$ 1 → 47 Ω, maille 20 nH",
+                 color="#e8eaed", fontsize=11)
+    bx.set_title("inductance de boucle — 2 → 40 nH, $R_g$ = 10 Ω",
+                 color="#e8eaed", fontsize=11)
+    fig.suptitle("Surtension inverse sur la diode — les deux leviers" + chr(10)
+                 + SOUS, color="#e8eaed", fontsize=12.5, y=0.99)
+    fig.subplots_adjust(left=.062, right=.985, top=.80, bottom=.095,
+                        wspace=.15)
+    p = ILL / "surtension_diode.png"
     p.unlink(missing_ok=True)
     fig.savefig(p, facecolor=fig.get_facecolor())
     print("->", p.name)
@@ -207,4 +256,5 @@ def tableau():
 if __name__ == "__main__":
     graphe_vitesse()
     graphe_maille()
+    graphe_combine()
     tableau()

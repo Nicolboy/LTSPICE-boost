@@ -43,14 +43,28 @@ zéro à chaque cycle.
 
 ### Les deux leviers de la surtension sur la diode
 
-![Surtension contre vitesse de commutation](04-emi/illustrations/surtension_vs_vitesse.png)
+![Surtension inverse sur la diode — les deux leviers](04-emi/illustrations/surtension_diode.png)
 
-![Surtension contre inductance de boucle](04-emi/illustrations/surtension_vs_maille.png)
+*Versions détaillées, une par levier :*
+[vitesse de commutation](04-emi/illustrations/surtension_vs_vitesse.png) ·
+[inductance de boucle](04-emi/illustrations/surtension_vs_maille.png)
 
 $$\Large \Delta V = L_\sigma \frac{di}{dt}$$
 
-Vérifiée **sans aucun paramètre libre** : 10 nH × 5,10 A/ns = 51,0 V pour
-50,8 V mesurés ; 40 nH × 2,19 A/ns = 87,6 V pour 87,6 V mesurés.
+**C'est la figure où la méthode annoncée plus bas se vérifie elle-même.** La
+courbe pointillée n'est pas un ajustement : c'est le produit de deux
+grandeurs mesurées indépendamment, $L_\sigma$ imposée et $di/dt$ relevé à la
+coupure. Elle tombe sur les points, **sans aucun paramètre libre** :
+
+| $L_\sigma$ | $di/dt$ mesuré | $L_\sigma \cdot di/dt$ | mesuré |
+|---|---|---|---|
+| 10 nH | 5,10 A/ns | 51,0 V | **50,8 V** |
+| 20 nH | 3,65 A/ns | 72,9 V | **72,9 V** |
+| 40 nH | 2,19 A/ns | 87,6 V | **87,6 V** |
+
+Une loi du manuel, deux modèles constructeur, et le recoupement qui tient à
+0,4 % près. C'est ce que vaut la **vérification croisée** revendiquée plus
+bas — pas une intention de méthode, un résultat.
 
 Deux faits que seule la comparaison des deux diodes fait apparaître. **De 1
 à 22 Ω, la résistance de grille ne change rien** sur la Schottky silicium :
