@@ -167,6 +167,41 @@ function draw(){
     cx.fillText(RG[i]+" Ω", t[0], t[1]+4);
   }
 
+  /* AXE VERTICAL, au coin le plus ELOIGNE : pose n'importe ou ailleurs il
+     passerait devant la surface. On le recalcule a chaque rotation, donc il
+     change de coin quand on tourne -- c'est voulu, il reste toujours
+     derriere le relief. Sans graduations en Z le relief n'est pas
+     mesurable : la couleur seule ne donne pas une valeur. */
+  let coin=null;
+  for(const [x,y] of [[0,0],[1,0],[1,1],[0,1]]){
+    const q=proj(x,y,0);
+    if(!coin || q[2]>coin.q[2]) coin={x,y,q};
+  }
+  const haut=proj(coin.x,coin.y,1);
+  cx.strokeStyle="#49546a"; cx.lineWidth=1.3;
+  cx.beginPath(); cx.moveTo(coin.q[0],coin.q[1]);
+  cx.lineTo(haut[0],haut[1]); cx.stroke();
+  const vers = coin.x<0.5 ? -1 : 1;          // de quel cote ecrire
+  cx.textAlign = vers<0 ? "right" : "left";
+  for(let k=0;k<=4;k++){
+    const u=k/4, v=lo+(hi-lo)*u, q=proj(coin.x,coin.y,u);
+    cx.strokeStyle="#49546a"; cx.lineWidth=1;
+    cx.beginPath(); cx.moveTo(q[0],q[1]); cx.lineTo(q[0]+vers*7,q[1]); cx.stroke();
+    cx.fillStyle="#9aa4b5"; cx.font="12px system-ui";
+    cx.fillText(v.toFixed(hi<10?2:(hi<100?0:0)), q[0]+vers*11, q[1]+4);
+    /* trait de rappel horizontal, discret : il donne l'altitude a l'oeil
+       meme quand la maille est loin de l'axe. */
+    if(k>0 && k<5){
+      const o=proj(coin.x, coin.x===coin.y?1-coin.y:coin.y, u);
+      cx.strokeStyle="rgba(73,84,106,.35)";
+      cx.beginPath(); cx.moveTo(q[0],q[1]); cx.lineTo(o[0],o[1]); cx.stroke();
+    }
+  }
+  const mil=proj(coin.x,coin.y,0.5);
+  cx.save(); cx.translate(mil[0]+vers*52, mil[1]); cx.rotate(-Math.PI/2);
+  cx.textAlign="center"; cx.fillStyle="#e6e9ef"; cx.font="13px system-ui";
+  cx.fillText(GR[ig][1], 0, 0); cx.restore();
+
   /* faces triees du plus loin au plus proche : sans ce tri, une maille
      arriere se dessine par-dessus une maille avant. */
   const faces=[];
