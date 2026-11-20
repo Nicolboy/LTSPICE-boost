@@ -11,6 +11,29 @@ en texte brut (`.asc`), lancent la simulation en mode batch, parsent les
 résultats `.meas`, et tracent les graphiques — tout est reproductible
 depuis les scripts, aucun résultat n'est recopié à la main.
 
+![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
+
+Spectre conduit en mode différentiel, étage 19 V → 80 V, 47 W, 400 kHz,
+derrière un LISN CISPR 25 de 5 µH. Le passage de **4,7 µH en conduction
+discontinue** à **47 µH en conduction continue** retire **17 à 20 dB** sur
+tout le peigne d'harmoniques, sans ajouter un seul composant au filtre —
+le courant d'entrée ne retombe plus à zéro à chaque cycle.
+
+Deux choses que cette figure dit et qu'un gabarit continu masquerait :
+
+- **le fondamental à 400 kHz ne tombe dans aucune bande.** CISPR 25 vise
+  des bandes de service radio, séparées par des trous — ici 0,3 à
+  0,53 MHz. Ce qui contraint, ce sont H2 à H4 en moyennes ondes ;
+- **au-delà de 30 MHz le gain s'efface.** Là, ce n'est plus le mode de
+  conduction qui domine mais la résonance de la maille de commutation, et
+  aucun choix d'inductance d'entrée ne l'atteint.
+
+> L'ESR et l'ESL des deux électrolytiques sont **posées, non relevées** :
+> les références Panasonic exactes ne sont pas encore fixées. L'ESR du
+> 220 µF commande la marge de stabilité du filtre, de −3,4 dB (polymère à
+> 2 mΩ, instable sans la branche amortie) à +28,9 dB (100 mΩ). À remplacer
+> dès que la référence est connue.
+
 ## Pourquoi ce dépôt
 
 Montrer la démarche, pas seulement le résultat : hypothèses de départ
@@ -28,7 +51,7 @@ aveugle dans l'un ou l'autre.
 | 2 | [Technologie switch/diode (Si vs GaN, Schottky vs ultrafast)](02-mosfet-diode/) | ✅ fait |
 | 2b | [… étendu 200-800 kHz : calibre vs technologie](02-mosfet-diode/#11-extension-200-800-khz--le-calibre-avant-la-technologie) | ✅ fait |
 | 3 | [Architectures (CCM/DCM) et inductance](03-architectures/) | ✅ fait |
-| 4 | [EMI conduite](04-emi/) | 🚧 en cours (plan posé, pas encore de mesure spectrale) |
+| 4 | [EMI conduite](04-emi/) | 🚧 en cours (gabarit CISPR 25 obtenu, premiers spectres, architecture tranchée) |
 
 ## Méthode générale
 

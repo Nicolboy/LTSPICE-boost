@@ -1,0 +1,72 @@
+* =====================================================================
+* LISN double CISPR 25 -- 5 uH / 50 ohms
+* STATUT : RECONSTRUIT, controle par balayage .ac
+* =====================================================================
+* Broches :
+*   BATT_P, BATT_N  cote batterie / alimentation
+*   EUT_P,  EUT_N   cote convertisseur (equipement sous essai)
+*   MEAS_P, MEAS_N  sorties vers recepteur -- MESURER ICI, LAISSER OUVERT
+*   GND             plan de masse
+*
+* VALIDITE DECLAREE : 150 kHz - 108 MHz (bande CISPR 25).
+*
+* ---------------------------------------------------------------------
+* CE QUI A ETE CORRIGE PAR RAPPORT A LA PREMIERE ECRITURE
+* ---------------------------------------------------------------------
+* 1. LA RESISTANCE DE 50 OHMS TERMINE A LA MASSE, et la broche de mesure
+*    est prise AVANT elle. Elle etait placee en serie ENTRE un noeud
+*    interne et la broche de sortie :
+*
+*        C_meas_p EUT_P NODE_MEAS_P 0.1u
+*        R_term_p NODE_MEAS_P MEAS_P 50       <-- faux
+*
+*    Broche de sortie laissee ouverte -- ce qu'une sortie est censee etre
+*    -- aucun courant ne traverse les 50 ohms, le reseau ne charge plus
+*    l'EUT, et l'impedance presentee monte a 953 ohms a 100 MHz au lieu
+*    de 47,6. VINGT-SIX DECIBELS D'ERREUR, sans message ni echec de
+*    convergence : le spectre sort, il est faux. Mesure :
+*
+*        frequence      tel quel, MEAS ouvert     corrige
+*        150 kHz             4,72 ohm            4,79 ohm
+*          1 MHz            31,40 ohm           26,60 ohm
+*         30 MHz           685,49 ohm           47,56 ohm
+*        100 MHz           952,89 ohm           47,61 ohm
+*
+*    Forcer MEAS_P a la masse retablissait l'impedance mais rendait le
+*    noeud de mesure interne au sous-circuit : plus rien a lire.
+*
+* 2. R_damp PORTEE DE 1 k A 10 k. En parallele sur les 5 uH, elle ramene
+*    l'impedance a 50 // R_damp. A 1 k cela fait 47,6 ohms, soit -0,42 dB
+*    CONSTANT sur toute la bande ; a 10 k, 49,75 ohms et -0,04 dB. Cet
+*    element n'existe pas dans un LISN reel : il n'est la que pour amortir
+*    la resonance L_line / C_batt en simulation. Le prix doit donc rester
+*    negligeable devant la grandeur mesuree.
+*
+* ---------------------------------------------------------------------
+* CE QUI N'EST PAS VERIFIE
+* ---------------------------------------------------------------------
+* L'impedance a 150 kHz vaut 4,8 ohms. C'est inherent a un reseau de
+* 5 uH -- la reactance omega*L n'y vaut que 4,7 ohms -- et non un defaut.
+* Mais CISPR 25 specifie un GABARIT de tolerance d'impedance que ce depot
+* ne possede pas. Tant qu'il manque, ce LISN reproduit la TOPOLOGIE
+* normative, pas sa conformite. A ne pas confondre.
+* =====================================================================
+.subckt LISN_CISPR25 BATT_P BATT_N EUT_P EUT_N MEAS_P MEAS_N GND
+
+* --- ligne positive
+C_batt_p BATT_P    GND      1u   IC=0
+L_line_p BATT_P    NODE_L_P 5u
+R_damp_p BATT_P    NODE_L_P 10k
+R_par_p  NODE_L_P  EUT_P    0.001
+C_meas_p EUT_P     MEAS_P   0.1u
+R_term_p MEAS_P    GND      50
+
+* --- ligne negative / retour
+C_batt_n BATT_N    GND      1u   IC=0
+L_line_n BATT_N    NODE_L_N 5u
+R_damp_n BATT_N    NODE_L_N 10k
+R_par_n  NODE_L_N  EUT_N    0.001
+C_meas_n EUT_N     MEAS_N   0.1u
+R_term_n MEAS_N    GND      50
+
+.ends LISN_CISPR25
