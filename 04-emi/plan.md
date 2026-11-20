@@ -187,7 +187,25 @@ est inconnue, la bibliothèque n'en porte aucune.
 ### Réseau d'entrée — trois variantes mesurées, 2026-11-20
 
 Banc `run_cin.py`, `Rp = 5903 Ω` (médiane du nuage), 16 périodes de mesure
-après 24 d'établissement. Figure : `results/cin_comparaison.png`.
+après 24 d'établissement.
+
+![Mode différentiel conduit — effet du réseau d'entrée](illustrations/cin_comparaison.png)
+
+<details><summary><b>Paramètres</b> — <code>run_cin.py</code></summary>
+
+| | |
+|---|---|
+| inductances | `SER1360-472` 4,7 µH DCM · `SER2211-473` 47 µH CCM |
+| transistor / diode | `EPC2207` GaN · `V8PA22` Schottky Si 200 V |
+| entrée | 220 µF ∥ (1000 µF + 500 mΩ) ∥ 1 µF X7R |
+| LISN | CISPR 25, 5 µH, mesure en tension |
+| **$R_g$ / front** | **1 Ω / 150 ps → 385 V/ns** ⚠ non justifié |
+| fenêtre | 24 + 16 périodes, pas max 0,5 ns |
+
+> ⚠ Contenu HF à reprendre : à 10 Ω le $dV/dt$ tombe à 73 V/ns. Le pic de
+> 88 MHz est très probablement un artefact de cette vitesse.
+
+</details>
 
 | | C totale | ondulation d'entrée | état |
 |---|---|---|---|

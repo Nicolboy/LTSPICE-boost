@@ -695,31 +695,86 @@ avec le modèle constructeur de la V8PA22 et le réseau d'entrée réel :
 > régulé. Les puissances d'avalanche sont donc **majorées**. Le fait
 > qualitatif, lui, ne dépend pas de ce détail.
 
-**Le résultat qui tranche : l'avalanche ne dépend pas de L.** 691, 704 et
-720 mW pour un rapport de 4,5 sur l'inductance ; 5,4 ns de durée dans les
-trois cas. Elle n'est pas un effet d'ondulation qu'on réglerait en changeant
-de self — elle est une propriété du CCM lui-même, fixée par la charge
-recouvrée de la diode et l'inductance de maille.
+**L'avalanche ne dépend pas de L** — 691, 704 et 720 mW pour un rapport de
+4,5 sur l'inductance, et 5,4 ns de durée dans les trois cas. Mais la raison
+n'est pas celle que cette section annonçait d'abord.
 
-**On ne peut donc pas choisir cette architecture en gardant la V8PA22.**
+> **Correction, 2026-11-20.** J'avais écrit ici que l'avalanche était « une
+> propriété du CCM lui-même ». **C'est faux.** Elle est une propriété du
+> couple **CCM + diode sous-dimensionnée en tension**, et le §12.6 le montre
+> en remplaçant la pièce sans rien changer d'autre. La première version de
+> ce paragraphe concluait qu'il fallait changer de diode pour débloquer le
+> choix d'architecture ; le prototype de juillet-août avait **déjà** la bonne
+> diode, et c'est le dépôt qui était en retard.
 
-### 12.6 Ce qu'il faut à la diode pour débloquer le choix
+### 12.6 Les deux leviers, mesurés — et la diode qui les décide
 
-Il faut sortir la tension inverse du claquage avec une marge de travail, et
-supprimer la charge recouvrée qui crée la surtension :
+![Surtension contre vitesse de commutation](../04-emi/illustrations/surtension_vs_vitesse.png)
 
-- **tenue inverse ≥ 300 V** — le pic naturel est écrêté à 220 V ici, donc sa
-  valeur libre n'est pas lisible sur ce banc ; elle est à mesurer sur une
-  pièce qui ne claque pas ;
-- **recouvrement nul ou négligeable** — une Schottky SiC 650 V n'a pas de
-  charge stockée, donc pas de pic de recouvrement. C'est le seul moyen connu
-  de faire du CCM propre à cette tension : **il n'existe pas de Schottky
-  silicium au-dessus de 200 V**, constat déjà porté au §9.
+![Surtension contre inductance de boucle](../04-emi/illustrations/surtension_vs_maille.png)
 
-Ce changement ne se contente pas de lever l'obstacle : il supprime aussi les
-~700 mW d'avalanche et la source large bande que constitue un écrêtage non
-linéaire à 400 kHz — ce qui déplacerait sans doute aussi le pic de 88 MHz
-relevé au chapitre 4.
+<details><summary><b>Paramètres</b> — <code>../04-emi/run_surtension.py</code></summary>
+
+| | |
+|---|---|
+| étage | boost 19 V → 80 V, 47 W, 400 kHz |
+| inductance | `SER2211-473` 47 µH, modèle Coilcraft — CCM dès 7,1 W |
+| transistor | `EPC2207` GaN, modèle EPC |
+| diodes | `C6D04065A` SiC 650 V · `V8PA22` Schottky Si 200 V |
+| entrée | 220 µF ∥ (1000 µF + 500 mΩ) ∥ 1 µF X7R |
+| balayage 1 | $R_g$ 1 → 47 Ω à $L_\sigma$ = 20 nH |
+| balayage 2 | $L_\sigma$ 2 → 40 nH à $R_g$ = 10 Ω |
+| fenêtre | 8 + 2 périodes, pas max 0,5 ns — suffisant pour une **crête**, pas pour un spectre |
+
+</details>
+
+$$\Large \Delta V = L_\sigma \frac{di}{dt}
+\qquad\text{et}\qquad I_{rr}=\sqrt{2\,Q_{rr}\,\frac{di}{dt}}$$
+
+Banc `04-emi/run_surtension.py`, composants retenus — `SER2211-473` 47 µH en
+CCM, `EPC2207` GaN — et **deux modèles constructeur de diode** :
+`C6D04065A` (SiC 650 V Wolfspeed, celle du prototype) contre `V8PA22`
+(Schottky Si 200 V, le choix du §9).
+
+**La loi se vérifie sans aucun paramètre libre** sur la SiC :
+
+| $L_\sigma$ | $di/dt$ mesuré | $L_\sigma \cdot di/dt$ | dépassement mesuré |
+|---|---|---|---|
+| 10 nH | 5,10 A/ns | 51,0 V | **50,8 V** |
+| 20 nH | 3,65 A/ns | 72,9 V | **72,9 V** |
+| 40 nH | 2,19 A/ns | 87,6 V | **87,6 V** |
+
+La courbe pointillée de la figure n'est pas un ajustement : c'est le produit
+des deux mesures. Et elle s'infléchit parce que **la maille freine son propre
+$di/dt$** — doubler $L_\sigma$ ne double pas la surtension.
+
+**Le fait le plus utile du panneau de gauche : de 1 à 22 Ω, $R_g$ ne change
+rien.** Le $di/dt$ reste à 7,0–7,5 A/ns, la V8PA22 reste écrêtée, l'avalanche
+reste à ~600 mW. Sur une diode à charge recouvrée, **le $di/dt$ de la coupure
+est celui du recouvrement, pas de la grille** : la diode se coupe à sa propre
+vitesse quoi que fasse le driver. Il faut 47 Ω pour que la commande redevienne
+limitante — le pic retombe alors à 184,7 V et l'avalanche s'annule.
+
+La SiC répond immédiatement : 72,9 V à 10 Ω, **15,9 V à 47 Ω**.
+
+| $L_\sigma$ | $di/dt$ SiC | $di/dt$ V8PA22 |
+|---|---|---|
+| 2 nH | 7,7 A/ns | **40,1 A/ns** |
+| 5 nH | 6,5 A/ns | 30,0 A/ns |
+| 20 nH | 3,6 A/ns | 7,1 A/ns |
+
+À maille serrée la Schottky silicium coupe **cinq fois plus vite**, et c'est
+pourquoi resserrer le routage ne la sauve pas : à 2 nH elle est juste sous le
+claquage, dès 5 nH elle avalanche. **Elle est en avalanche dans 9 cas sur 11 ;
+la SiC dans aucun.**
+
+> **Deux réserves de lecture.** Les croix rouges de la figure ne sont pas des
+> mesures de pic : c'est le niveau d'écrêtage à 220,6 V, et c'est la colonne
+> avalanche qui dit ce qui a été dissipé pour l'obtenir. Par ailleurs ce banc
+> tournait à $R_g = 1\ \Omega$ et 150 ps de front — **l'extrême physique d'un
+> GaN, hérité et jamais choisi**, soit 385 V/ns au lieu de 73 V/ns à 10 Ω.
+> Tout le contenu haute fréquence du [chapitre 4](../04-emi/plan.md) est à
+> reprendre à une vitesse défendable.
 
 ### 12.7 Conclusion
 
@@ -727,9 +782,12 @@ Le choix DCM/CCM à frontière 10–20 W est **défendable sur la CEM et sur la
 dynamique**, et il l'est mieux que le DCM pur du §9 : il récupère 17 à 20 dB
 d'émission tout en gardant deux fois la bande de boucle d'un 47 µH.
 
-Il est en revanche **conditionné à un changement de diode**. Avec la V8PA22,
-il réintroduit l'avalanche à 400 kHz que le §9 avait écartée, et aucune
-valeur d'inductance dans la fenêtre ne l'évite.
+**La condition sur la diode est déjà remplie.** Le prototype de juillet-août
+porte une SiC 650 V, et c'est ce qui explique que son concepteur n'y ait
+constaté aucune surtension anormale : le pic de 153 V y passe avec 615 V de
+marge, là où la V8PA22 l'écrête en dissipant 700 mW à 400 kHz. Ce n'était pas
+une précaution, c'était la condition du CCM à cette tension — **il n'existe
+pas de Schottky silicium au-dessus de 200 V**, constat déjà porté au §9.
 
 **Valeur recommandée si le choix est confirmé : 22 µH**, `SER1512-223` —
 DCR 7,6 mΩ soit 51 mW de cuivre, résonance propre 12,1 MHz (la plus haute de
