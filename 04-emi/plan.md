@@ -158,6 +158,51 @@ Trois raisons de rester sur CISPR 25 :
 > pointent donc pas le même défaut, et aucun n'est « plus sévère » en tout
 > point.
 
+### Contrainte sur la diode — surface complète, 120 points
+
+![Surtension inverse sur la diode](illustrations/surtension_surface_3d.png)
+
+**Version interactive :** [`surtension-3d.html`](surtension-3d.html) —
+surface tournante, trois grandeurs au choix (ΔV, dV/dt, di/dt), infobulle
+par point.
+
+$$\Large \Delta V = L_\sigma rac{di}{dt}$$
+
+Vérifiée sans aucun paramètre libre : 20 nH × 3,65 A/ns = 72,9 V pour
+72,9 V mesurés.
+
+| coin | ΔV | verdict |
+|---|---|---|
+| DCM · Si · 22 Ω · 2 nH | 2,8 V | marge 137 V |
+| CCM · Si · 10 Ω · 2 nH | 69,0 V | marge 71 V — **avalanche dès 5 nH** |
+| CCM · Si · 22 Ω · 2 nH | 15,7 V | marge 124 V |
+| CCM · SiC · 10 Ω · 2 nH | 15,1 V | marge **555 V** |
+
+**En DCM les deux diodes sont plates à 2–3 V** sur toute la grille : le
+courant est déjà nul à l'enclenchement. **En CCM la `V8PA22` est en
+avalanche sur 22 mailles sur 30.** Le coin à 10 Ω est une arête — 3 nH de
+dérive au routage suffisent à basculer.
+
+<details><summary><b>Paramètres</b> — <code>run_surface.py</code></summary>
+
+| | |
+|---|---|
+| étage | boost 19 V → 80 V, 47 W, 400 kHz |
+| inductances | `SER1360-472` 4,7 µH (DCM) · `SER2211-473` 47 µH (CCM) |
+| transistor | `EPC2207` GaN, modèle EPC |
+| diodes | `V8PA22` Si 200 V · `IDH04G65C6` CoolSiC G6 650 V |
+| entrée | 220 µF ∥ (1000 µF + 500 mΩ) ∥ 1 µF X7R |
+| grille | $R_g$ 1→47 Ω × $L_\sigma$ 2→40 nH, **120 points, 0 manquant** |
+| fenêtre | 8 + 2 périodes, pas max 0,5 ns — suffisant pour une **crête** |
+
+> Les mailles cerclées de rouge sont **écrêtées** : la diode y est en
+> avalanche, l'altitude est son claquage et non le pic réel.
+>
+> La SiC est l'**Infineon**, pas la Wolfspeed : cette dernière ne converge
+> pas en DCM (cf. §12.6 du chapitre 3).
+
+</details>
+
 ### Dettes de modèle — inscrites le 2026-11-20
 
 Deux approximations du banc EMI, à ne pas laisser passer dans un résultat :
