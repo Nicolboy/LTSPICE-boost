@@ -599,6 +599,147 @@ le bilan de pertes du §7 n'est pas menacé. Il est **muet sur la sonnerie** à
 Lever cette réserve demande une mesure d'impédance de la pièce, ou le modèle
 que Coilcraft ne publie pas.
 
+## 12. Premier étage DCM/CCM, frontière 10–20 W — justification
+
+> **Orientation du concepteur, 2026-11-20**, au vu des simulations et des
+> essais du premier prototype de juillet-août. Les essais de prototype ne
+> sont pas dans ce dépôt : ce qui suit est l'argumentaire **analytique et
+> simulé**, et il doit être recoupé avec les relevés de banc.
+
+### 12.1 La frontière n'est pas un réglage, c'est une valeur d'inductance
+
+Tout boost à inductance fixe est discontinu en dessous d'un seuil et continu
+au-dessus. Choisir « DCM/CCM avec transition entre 10 et 20 W » revient donc
+à fixer **un seul nombre** :
+
+$$\Large P_\text{lim}=\frac{V_{in}^2\,D\,\eta}{2\,L\,f_{sw}}
+\qquad\Longrightarrow\qquad
+L=\frac{V_{in}^2\,D\,\eta}{2\,P_\text{lim}\,f_{sw}}$$
+
+| frontière visée | L |
+|---|---|
+| 20 W | 16,7 µH |
+| 15 W | 22,3 µH |
+| 10 W | 33,4 µH |
+
+La fenêtre impose **16,7 à 33,4 µH**. Valeurs normalisées à l'intérieur :
+18, 22, 27, 33 µH. Aucune des quatre n'était dans la liste courte initiale —
+c'est une famille nouvelle, à caractériser.
+
+### 12.2 Ce que coûte et ce que rapporte le déplacement de la frontière
+
+| L | frontière | bruit DM vs 47 µH | $f_{RHP}$ | bande de boucle utile | I_pk à 47 W |
+|---|---|---|---|---|---|
+| 18 µH | 18,5 W | **+8,3 dB** | 67,9 kHz | ~17 kHz | 3,56 A |
+| 22 µH | 15,2 W | +6,6 dB | 55,6 kHz | ~14 kHz | 3,37 A |
+| 27 µH | 12,4 W | +4,8 dB | 45,3 kHz | ~11 kHz | 3,22 A |
+| 33 µH | 10,1 W | +3,1 dB | 37,0 kHz | ~9 kHz | 3,10 A |
+| *47 µH* | *7,1 W* | *référence* | *26,0 kHz* | *~6,5 kHz* | *2,94 A* |
+
+Le zéro à partie réelle positive vaut $f_{RHP}=R_{ch}(1-D)^2/2\pi L$ ; la bande
+de boucle praticable est de l'ordre de $f_{RHP}/4$.
+
+**Les deux colonnes s'opposent terme à terme.** Monter la frontière de 7 à
+15 W double la bande de boucle et coûte 6,6 dB d'émission. C'est l'arbitrage,
+et il n'a pas d'optimum intrinsèque : il dépend de la dynamique exigée.
+
+### 12.3 Le pire cas d'émission est À la frontière, jamais à pleine charge
+
+| charge | 22 µH | 47 µH |
+|---|---|---|
+| 2 W | DCM, H1 = 0,193 A | DCM, H1 = 0,168 A |
+| 5 W | DCM, H1 = 0,400 A | DCM, H1 = 0,277 A |
+| **frontière** | **CCM, H1 = 0,625 A** | **CCM, H1 = 0,293 A** |
+| 25 W | CCM, H1 = 0,625 A | CCM, H1 = 0,293 A |
+| 47 W | CCM, H1 = 0,625 A | CCM, H1 = 0,293 A |
+
+En DCM le bruit **croît** avec la charge ; en CCM il est **constant**, parce
+que $\Delta I = V_{in}D/Lf_{sw}$ ne contient pas le courant moyen. Le maximum
+est donc atteint exactement à la frontière et ne bouge plus.
+
+Conséquence pratique : **la position de la frontière et le pire cas
+d'émission sont le même paramètre.** Un seul point de qualification suffit,
+au-dessus de la frontière. Et il n'y a aucun intérêt à mesurer à pleine
+charge en espérant un cas plus défavorable — il n'existe pas.
+
+### 12.4 Pourquoi pas DCM partout, pourquoi pas CCM jusqu'en bas
+
+**DCM partout** (4,7 µH, frontière 71 W) : mesuré au [chapitre 4](../04-emi/plan.md),
+c'est **17 à 20 dB d'émission en plus** dans les bandes du gabarit, et 6,27 A
+de crête au lieu de 3,37. Disqualifié par la CEM.
+
+**CCM jusqu'en bas** (100 µH, frontière 3,3 W) : $f_{RHP}$ tombe à 12,2 kHz,
+donc ~3 kHz de bande de boucle. La résonance propre descend à 5,8 MHz, ce qui
+rend la pièce franchement capacitive bien avant les 108 MHz du gabarit.
+
+**Le régime DCM sous 10–20 W n'est pas un objectif, c'est une conséquence
+acceptée.** Et elle est bénigne : à faible charge le courant crête est petit,
+l'émission est plus basse qu'à la frontière, et la diode cesse d'être coupée
+en conduction.
+
+### 12.5 L'obstacle, et il est dirimant : l'avalanche de la diode
+
+Une frontière à 10–20 W place le **nominal 47 W en CCM**. Or le [§9](#9-arbitrage-darchitecture--dcm-retenu)
+a écarté le CCM précisément pour cela. Vérifié sur le banc du chapitre 4,
+avec le modèle constructeur de la V8PA22 et le réseau d'entrée réel :
+
+| cas | tension inverse crête | avalanche | durée par cycle |
+|---|---|---|---|
+| 4,7 µH — **DCM** | 93,4 V | **0 mW** | 0 ns |
+| 22 µH — CCM | **220,6 V, écrêtée** | 720 mW | 5,5 ns |
+| 47 µH — CCM | **220,6 V, écrêtée** | 691 mW | 5,4 ns |
+| 100 µH — CCM | **220,6 V, écrêtée** | 704 mW | 5,4 ns |
+
+> Les cas CCM tournent à 79–92 W et non à 47 W : le banc est en boucle
+> ouverte sur une source de tension, le point de fonctionnement n'y est pas
+> régulé. Les puissances d'avalanche sont donc **majorées**. Le fait
+> qualitatif, lui, ne dépend pas de ce détail.
+
+**Le résultat qui tranche : l'avalanche ne dépend pas de L.** 691, 704 et
+720 mW pour un rapport de 4,5 sur l'inductance ; 5,4 ns de durée dans les
+trois cas. Elle n'est pas un effet d'ondulation qu'on réglerait en changeant
+de self — elle est une propriété du CCM lui-même, fixée par la charge
+recouvrée de la diode et l'inductance de maille.
+
+**On ne peut donc pas choisir cette architecture en gardant la V8PA22.**
+
+### 12.6 Ce qu'il faut à la diode pour débloquer le choix
+
+Il faut sortir la tension inverse du claquage avec une marge de travail, et
+supprimer la charge recouvrée qui crée la surtension :
+
+- **tenue inverse ≥ 300 V** — le pic naturel est écrêté à 220 V ici, donc sa
+  valeur libre n'est pas lisible sur ce banc ; elle est à mesurer sur une
+  pièce qui ne claque pas ;
+- **recouvrement nul ou négligeable** — une Schottky SiC 650 V n'a pas de
+  charge stockée, donc pas de pic de recouvrement. C'est le seul moyen connu
+  de faire du CCM propre à cette tension : **il n'existe pas de Schottky
+  silicium au-dessus de 200 V**, constat déjà porté au §9.
+
+Ce changement ne se contente pas de lever l'obstacle : il supprime aussi les
+~700 mW d'avalanche et la source large bande que constitue un écrêtage non
+linéaire à 400 kHz — ce qui déplacerait sans doute aussi le pic de 88 MHz
+relevé au chapitre 4.
+
+### 12.7 Conclusion
+
+Le choix DCM/CCM à frontière 10–20 W est **défendable sur la CEM et sur la
+dynamique**, et il l'est mieux que le DCM pur du §9 : il récupère 17 à 20 dB
+d'émission tout en gardant deux fois la bande de boucle d'un 47 µH.
+
+Il est en revanche **conditionné à un changement de diode**. Avec la V8PA22,
+il réintroduit l'avalanche à 400 kHz que le §9 avait écartée, et aucune
+valeur d'inductance dans la fenêtre ne l'évite.
+
+**Valeur recommandée si le choix est confirmé : 22 µH**, `SER1512-223` —
+DCR 7,6 mΩ soit 51 mW de cuivre, résonance propre 12,1 MHz (la plus haute de
+la fenêtre), `PkZ = 6322 Ω` publié. Frontière à 15,2 W, au centre de la
+fenêtre demandée.
+
+Trois choses restent à établir, et aucune ne sort de la simulation seule :
+les relevés du prototype de juillet-août, la diode de remplacement, et la
+tension inverse libre une fois le claquage écarté.
+
 ## Reproduire
 
 Données sources : `donnees/` — exports du *Power Inductor Finder* de

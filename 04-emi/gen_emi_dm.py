@@ -50,6 +50,8 @@ VIN, VOUT, FSW = 19.0, 80.0, 400e3
 INDUCTANCES = {
     "47u": ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0),
     "4u7": ("SER1360-472",  4.7e-6, 0.0055, 4.578e-12, 1778.0,      0.0),
+    "22u": ("SER1512-223", 22.0e-6, 0.0076, 7.882e-12, 6322.4,    140.0),
+    "100u": ("MSS1278-104", 100.0e-6, 0.0520, 7.5e-12, 39500.0,   140.0),
 }
 IND_DEFAUT = "47u"
 L_BOUCLE, RG_EXT, VGS = 20e-9, 1.0, 5.0
@@ -74,10 +76,25 @@ VARIANTES = {
     "sans_amor": [C_BULK220, C_MLCC],              # ce que la R rapporte
 }
 
+# DIODES. La V8PA22 est une Si 200 V : son claquage a 220 V ECRETE le pic
+# de commutation, d'ou l'avalanche relevee au chapitre 3. La C6D04065A est
+# la SiC 650 V du prototype de juillet-aout -- modele CONSTRUCTEUR Wolfspeed,
+# avec reseau thermique et claquage modelise vers 768 V.
+DIODE_SIC = "C6D04065A"
+LIB_SIC = LIB / "Wolfspeed" / "C6D04065A.lib"
+
 DIODE = ("DV8PA22",
          "D(is=7e-05 rs=0.00741429 n=2.62377 xti=13.7366 bv=220 eg=0.71 "
          "cjo=6.85e-10 m=1 vj=5.36 tt=7.73585e-10 ikf=0 fc=0.5 "
          "ibv=1e-10 isr=-7.00037e-07 trs1=-0.00514056)")
+
+
+def texte_sic():
+    """Contenu du modele Wolfspeed, pret a etre colle dans une netlist."""
+    t = LIB_SIC.read_bytes().decode("utf-8", "replace")
+    # on retire une eventuelle `.end` finale, qui couperait la netlist hote
+    return chr(10).join(l for l in t.splitlines()
+                        if l.strip().lower() != ".end")
 
 
 def sous_circuit(fichier, nom):
@@ -125,7 +142,7 @@ def duty_ccm():
 
 
 def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
-            ind=IND_DEFAUT):
+            ind=IND_DEFAUT, diode="si", rg=None, lb=None, tr=None):
     """Banc complet.
 
     `ind` designe l'inductance dans INDUCTANCES. `rp` ne sert plus qu'a
@@ -133,6 +150,13 @@ def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
     c'est la valeur publiee qui s'applique -- et c'est ce qu'on veut.
     """
     nom_l, l_h, dcr_l, cp_l, rp_l, rc_l = INDUCTANCES[ind]
+    # VITESSE DE COMMUTATION : Rg est le levier REEL du concepteur,
+    # `tr` le front propre au driver. 1 ohm et 150 ps etaient la
+    # valeur par defaut de ce banc -- l'extreme physique, jamais
+    # justifie, et il gonfle toute surtension et tout contenu HF.
+    rg = RG_EXT if rg is None else rg
+    lb = L_BOUCLE if lb is None else lb
+    tr = 0.15e-9 if tr is None else tr
     if rp is not None:
         rp_l = rp
     tsw = 1.0 / FSW
@@ -147,8 +171,29 @@ def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
         duty = duty_ccm() if ccm else duty_dcm(P_VISEE, l_h=l_h)
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
     i_in = P_VISEE / 0.97 / VIN                 # courant continu d'entree
-    cin = VARIANTES["bulk"] if cin is None else cin
+    cin = VARIANTES["complet"] if cin is None else cin
     desc_cin, lignes_cin, ic_cin, ctot = bloc_cin(cin)
+    # La SiC est un SOUS-CIRCUIT a cinq broches (A K Case Tj Tc), pas un
+    # `.model` : son boitier et ses deux noeuds thermiques doivent etre
+    # relies, sinon LTspice les laisse flotter et le modele thermique
+    # diverge. Tc est tenu a l'ambiante, exprimee en volts.
+    if diode == "sic":
+        nom_diode = DIODE_SIC
+        diode_ligne = "\n".join([
+            f"XD1  nda  nd   ncase ntj ntc {DIODE_SIC}",
+            "Rcase ncase nret 1e9",
+            "Vtc  ntc  0    25"])
+        # LE MODELE EST INLINE, PAS `.inc`. Huit instances LTspice qui
+        # incluent le MEME fichier se bloquent mutuellement sous Windows :
+        # le cas part en boucle sur « Changing Tseed » et ne converge
+        # jamais. Verifie le 2026-11-20 -- netlist identique, 6 s lancee
+        # seule, jamais terminee dans un lot de huit. Inliner supprime le
+        # fichier partage, donc le verrou.
+        modele_diode = texte_sic()
+    else:
+        nom_diode = DIODE[0]
+        diode_ligne = f"D1   nda  nd   {DIODE[0]}"
+        modele_diode = f".model {DIODE[0]} {DIODE[1]}"
     return f"""* Etage 1 {'CCM' if ccm else 'DCM'} derriere un LISN CISPR 25 -- mode differentiel
 * genere par gen_emi_dm.py -- ne pas editer a la main
 .lib {LIB / "EPC/EPCGaNLibrary.lib"}
@@ -202,17 +247,17 @@ L1   n1l  nsw  {l_h:.4e}
 Cp_l n1l  n2l  {cp_l:.4e}
 Rc_l n2l  nsw  {max(rc_l, 1e-9):.6g}
 
-* --- commutation
+* --- commutation (diode : {nom_diode})
 X1   ng   nsw  nss  EPC2207
 Vs   nss  nret DC 0
-Rg   ngd  ng   {RG_EXT}
-Vg   ngd  nret PULSE(0 {VGS} 0 0.15n 0.15n {{duty*TSW}} {{TSW}})
-Lb   nsw  nda  {L_BOUCLE:.4e}
-D1   nda  nd   {DIODE[0]}
+Rg   ngd  ng   {rg:.4g}
+Vg   ngd  nret PULSE(0 {VGS} 0 {tr:.4e} {tr:.4e} {{duty*TSW}} {{TSW}})
+Lb   nsw  nda  {lb:.4e}
+{diode_ligne}
 Vd   nd   nout DC 0
 Vo   nout nret DC {VOUT}
 
-.model {DIODE[0]} {DIODE[1]}
+{modele_diode}
 
 
 * Conditions initiales : sans elles, la resonance LISN/Cin -- quelques
@@ -223,7 +268,7 @@ Vo   nout nret DC {VOUT}
 .options reltol=1e-4 abstol=1e-11 vntol=1e-7 plotwinsize=0
 .tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e} uic
 
-.save V(mp) V(nin) V(nsw) I(Vl) I(Vbat) I(Vd)
+.save V(mp) V(nin) V(nsw) V(nda) I(Vl) I(Vbat) I(Vd) I(Vs)
 .meas TRAN pout AVG {VOUT}*I(Vd)  FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN iin  AVG -I(Vbat)      FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN vmp  RMS V(mp)         FROM {t0:.6e} TO {t1:.6e}
