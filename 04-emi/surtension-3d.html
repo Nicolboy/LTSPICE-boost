@@ -1,0 +1,215 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Surtension inverse — surface 3D interactive</title>
+<style>
+:root{--bg:#11141a;--pan:#171b23;--bord:#2b3240;--txt:#e6e9ef;--txt2:#9aa4b5;
+      --ko:#ff6b6b;--ok:#3ddc84}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+     font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:1.4rem 1.1rem 3rem}
+h1{font-size:1.45rem;margin:.2rem 0 .3rem;font-weight:650}
+.sous{color:var(--txt2);font-size:.93rem;margin:0 0 1.1rem}
+.barre{display:flex;flex-wrap:wrap;gap:.45rem;margin:.7rem 0}
+button{background:var(--pan);color:var(--txt);border:1px solid var(--bord);
+       border-radius:7px;padding:.44rem .8rem;cursor:pointer;font-size:.88rem}
+button:hover{border-color:#49546a}
+button.on{background:#223049;border-color:#4d7fc1;color:#cfe2ff}
+.lg{font-size:.78rem;color:var(--txt2);margin-left:.35rem}
+#wrap{position:relative;border:1px solid var(--bord);border-radius:11px;
+      background:var(--pan);overflow:hidden}
+canvas{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
+canvas:active{cursor:grabbing}
+#bulle{position:absolute;pointer-events:none;display:none;z-index:5;
+  background:#0d1016;border:1px solid var(--bord);border-radius:8px;
+  padding:.55rem .7rem;font-size:.82rem;line-height:1.5;max-width:270px;
+  box-shadow:0 8px 26px #0009}
+#bulle b{color:#cfe2ff}
+.note{color:var(--txt2);font-size:.85rem;margin:.8rem 0 0}
+.aide{background:#141821;border-left:3px solid #4d7fc1;border-radius:0 7px 7px 0;
+      padding:.65rem .85rem;margin:1rem 0;font-size:.87rem;color:var(--txt2)}
+table{border-collapse:collapse;margin-top:1rem;font-size:.85rem;width:100%}
+th,td{border:1px solid var(--bord);padding:.32rem .55rem;text-align:right}
+th{color:var(--txt2);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+.ecr{color:var(--ko)}
+</style></head><body><main>
+<h1>Surtension inverse sur la diode — surface 3D</h1>
+<p class="sous">boost 19 V → 80 V, 47 W, 400 kHz · EPC2207 GaN ·
+<b>120 points simulés</b> (6 valeurs de R<sub>g</sub> × 5 d'inductance de
+boucle × 2 diodes × 2 modes) · glisser pour tourner, molette pour zoomer</p>
+
+<div class="barre" id="bCas"></div>
+<div class="barre" id="bGrandeur"></div>
+
+<div id="wrap">
+  <canvas id="c" width="1140" height="660"></canvas>
+  <div id="bulle"></div>
+</div>
+<p class="note" id="leg"></p>
+
+<div class="aide" id="lecture"></div>
+<div id="tab"></div>
+</main>
+<script>
+const RG=[1.0, 2.2, 4.7, 10.0, 22.0, 47.0], LB=[2e-09, 5e-09, 1e-08, 2e-08, 4e-08], CAS=[["4u7|si", "DCM \u00b7 Schottky Si 200 V", 220.0], ["4u7|inf", "DCM \u00b7 SiC 650 V", 650.0], ["47u|si", "CCM \u00b7 Schottky Si 200 V", 220.0], ["47u|inf", "CCM \u00b7 SiC 650 V", 650.0]], GR=[["dv", "\u0394V \u2014 d\u00e9passement (V)", "V", "contrainte sur la diode"], ["dvdt", "dV/dt (V/ns)", "V/ns", "contenu haute fr\u00e9quence \u00b7 CEM"], ["didt", "di/dt (A/ns)", "A/ns", "courant interrompu"]], D={"4u7|si":[[[2.54,24.3,2.744,0.0,0],[2.91,23.47,2.152,0.0,0],[5.8,24.06,2.341,0.0,0],[13.24,23.66,1.743,0.0,0],[25.18,21.81,1.492,0.0,0]],[[2.52,23.22,2.515,0.0,0],[2.7,21.69,2.178,0.0,0],[6.34,23.27,2.302,0.0,0],[13.02,23.54,1.743,0.0,0],[25.51,21.57,1.498,0.0,0]],[[2.2,22.72,2.236,0.0,0],[2.43,20.2,2.28,0.0,0],[6.29,19.61,2.133,0.0,0],[13.06,20.73,1.804,0.0,0],[26.15,19.45,1.556,0.0,0]],[[2.45,18.99,2.3,0.0,0],[2.72,19.36,2.376,0.0,0],[6.32,19.33,1.959,0.0,0],[13.22,17.37,1.882,0.0,0],[26.93,18.52,1.668,0.0,0]],[[2.77,14.66,2.497,0.0,0],[2.99,14.07,2.37,0.0,0],[7.1,13.9,2.237,0.0,0],[13.95,13.67,1.993,0.0,0],[27.18,18.49,1.709,0.0,0]],[[3.11,9.82,2.278,0.0,0],[3.62,9.55,2.025,0.0,0],[5.61,9.25,1.887,0.0,0],[13.87,11.8,1.728,0.0,0],[25.35,16.75,1.502,0.0,0]]],"4u7|inf":[[[1.83,29.12,3.3,0.0,0],[2.71,26.11,3.083,0.0,0],[4.28,26.97,2.757,0.0,0],[6.24,28.7,2.316,0.0,0],[9.43,29.58,1.868,0.0,0]],[[1.9,28.24,3.286,0.0,0],[2.6,26.17,3.071,0.0,0],[4.12,26.83,2.755,0.0,0],[6.04,28.63,2.32,0.0,0],[9.42,29.59,1.874,0.0,0]],[[2.02,27.89,3.214,0.0,0],[2.31,26.33,3.012,0.0,0],[3.72,25.99,2.741,0.0,0],[5.51,26.73,2.344,0.0,0],[9.41,27.56,1.901,0.0,0]],[[2.21,27.56,3.201,0.0,0],[2.28,26.16,2.977,0.0,0],[2.77,24.96,2.711,0.0,0],[4.48,24.2,2.374,0.0,0],[9.42,22.7,1.966,0.0,0]],[[2.52,24.64,3.149,0.0,0],[2.59,23.42,2.973,0.0,0],[2.69,21.8,2.726,0.0,0],[4.67,19.52,2.387,0.0,0],[9.52,17.42,1.963,0.0,0]],[[2.88,15.7,2.379,0.0,0],[2.94,15.24,2.278,0.0,0],[3.06,14.58,2.144,0.0,0],[4.56,13.48,1.949,0.0,0],[9.91,11.97,1.688,0.0,0]]],"47u|si":[[[140.7,1103.94,70.942,931.1,1],[140.67,750.12,28.274,945.0,1],[140.65,539.01,14.099,824.5,1],[140.63,385.21,7.046,663.4,1],[140.62,273.53,3.518,571.3,1]],[[140.67,904.88,71.258,710.3,1],[140.66,720.97,28.272,876.9,1],[140.65,531.78,14.114,791.3,1],[140.63,381.4,7.036,682.0,1],[140.62,272.8,3.517,575.7,1]],[[140.56,550.52,74.754,78.2,1],[140.64,604.62,28.446,682.1,1],[140.64,503.78,14.108,761.6,1],[140.63,375.93,7.045,645.8,1],[140.62,268.82,3.519,584.7,1]],[[68.98,241.92,40.07,0.0,0],[140.57,369.18,30.03,141.5,1],[140.62,389.63,14.489,541.4,1],[140.63,339.99,7.063,598.7,1],[140.62,258.27,3.52,553.6,1]],[[15.67,71.26,12.645,0.0,0],[67.12,150.67,15.931,0.0,0],[131.86,208.61,14.245,0.0,0],[140.59,239.2,7.452,359.2,1],[140.61,217.75,3.598,429.2,1]],[[1.65,22.2,2.367,0.0,0],[12.94,43.73,4.942,0.0,0],[45.06,78.65,6.231,0.0,0],[104.7,117.86,6.01,0.0,0],[140.57,145.33,3.818,230.8,1]]],"47u|inf":[[[23.93,122.41,11.994,0.0,0],[50.79,99.84,10.182,0.0,0],[80.62,118.37,8.07,0.0,0],[113.09,135.72,5.659,0.0,0],[140.74,130.6,3.523,0.0,0]],[[23.44,87.65,11.753,0.0,0],[50.03,84.74,10.025,0.0,0],[79.74,117.13,7.99,0.0,0],[112.45,134.79,5.626,0.0,0],[140.37,129.5,3.514,0.0,0]],[[21.83,59.26,10.955,0.0,0],[47.51,82.51,9.517,0.0,0],[77.14,114.42,7.72,0.0,0],[110.32,131.92,5.521,0.0,0],[139.03,128.89,3.483,0.0,0]],[[15.06,42.49,8.803,0.0,0],[38.35,71.37,7.897,0.0,0],[66.69,99.72,6.689,0.0,0],[101.32,124.44,5.068,0.0,0],[133.59,125.9,3.343,0.0,0]],[[7.6,36.17,5.911,0.0,0],[20.62,54.73,5.642,0.0,0],[41.67,75.61,5.081,0.0,0],[75.55,95.32,4.075,0.0,0],[112.05,105.12,2.859,0.0,0]],[[1.58,22.8,3.196,0.0,0],[6.29,33.84,3.201,0.0,0],[18.64,48.08,3.119,0.0,0],[45.13,65.76,2.85,0.0,0],[83.74,80.26,2.282,0.0,0]]]};
+const cv=document.getElementById("c"), cx=cv.getContext("2d");
+const W=cv.width, H=cv.height, CX=W/2+10, CY=H/2+46, S=Math.min(W,H)*0.60;
+let az=-0.72, el=0.50, zoom=1, cas=CAS[3][0], ig=0, pts=[];
+
+/* Projection a la main : rotation azimut puis elevation, perspective
+   faible, et la PROFONDEUR est rendue pour trier les faces (peintre). */
+function proj(x,y,z){
+  const px=x-.5, py=y-.5, pz=z-.5;
+  const ca=Math.cos(az), sa=Math.sin(az);
+  const X=px*ca-py*sa, Y=px*sa+py*ca;
+  const ce=Math.cos(el), se=Math.sin(el);
+  const haut=pz*ce-Y*se, prof=Y*ce+pz*se;
+  const k=3.2/(3.2-prof*0.55), s=S*k*zoom*1.22;
+  return [CX+X*s, CY-haut*s, prof];
+}
+function coul(t){
+  t=Math.max(0,Math.min(1,t));
+  const st=[[0,[38,92,96]],[.35,[61,200,150]],[.6,[214,214,96]],
+            [.82,[240,150,70]],[1,[226,82,79]]];
+  for(let i=0;i<st.length-1;i++){const [a,ca]=st[i],[b,cb]=st[i+1];
+    if(t<=b){const u=(t-a)/(b-a||1);
+      return "rgb("+ca.map((c,k)=>Math.round(c+(cb[k]-c)*u)).join(",")+")";}}
+  return "rgb(226,82,79)";
+}
+/* L'echelle est COMMUNE aux quatre cas : sans cela on comparerait des
+   reliefs dessines a des echelles differentes, ce qui est exactement
+   l'erreur que la figure doit empecher. */
+function bornes(){
+  let hi=0;
+  for(const [c] of CAS) for(const li of D[c]) for(const p of li)
+    if(p && isFinite(p[ig])) hi=Math.max(hi,p[ig]);
+  return [0,hi||1];
+}
+function draw(){
+  cx.clearRect(0,0,W,H); pts=[];
+  const m=D[cas], [lo,hi]=bornes();
+  const gx=j=>j/(LB.length-1), gy=i=>i/(RG.length-1);
+  const z=v=>(v-lo)/(hi-lo||1);
+
+  cx.strokeStyle="#2b3240"; cx.lineWidth=1; cx.font="12px system-ui";
+  cx.fillStyle="#9aa4b5"; cx.textAlign="center";
+  for(let j=0;j<LB.length;j++){
+    const a=proj(gx(j),0,0), b=proj(gx(j),1,0);
+    cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke();
+    const t=proj(gx(j),-0.09,0);
+    cx.fillText((LB[j]*1e9).toFixed(0)+" nH", t[0], t[1]+4);
+  }
+  for(let i=0;i<RG.length;i++){
+    const a=proj(0,gy(i),0), b=proj(1,gy(i),0);
+    cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke();
+    const t=proj(-0.09,gy(i),0);
+    cx.fillText(RG[i]+" Ω", t[0], t[1]+4);
+  }
+
+  /* faces triees du plus loin au plus proche : sans ce tri, une maille
+     arriere se dessine par-dessus une maille avant. */
+  const faces=[];
+  for(let i=0;i<RG.length-1;i++) for(let j=0;j<LB.length-1;j++){
+    const q=[[i,j],[i,j+1],[i+1,j+1],[i+1,j]];
+    if(q.some(([a,b])=>!m[a][b])) continue;
+    const pr=q.map(([a,b])=>proj(gx(b),gy(a),z(m[a][b][ig])));
+    const v=q.reduce((s,[a,b])=>s+m[a][b][ig],0)/4;
+    faces.push({pr, prof:pr.reduce((s,p)=>s+p[2],0)/4, v,
+                ecr:q.some(([a,b])=>m[a][b][4])});
+  }
+  faces.sort((a,b)=>a.prof-b.prof);
+  for(const f of faces){
+    cx.beginPath(); cx.moveTo(f.pr[0][0],f.pr[0][1]);
+    for(let k=1;k<4;k++) cx.lineTo(f.pr[k][0],f.pr[k][1]);
+    cx.closePath();
+    cx.fillStyle=coul((f.v-lo)/(hi-lo||1)); cx.fill();
+    cx.strokeStyle=f.ecr?"rgba(255,107,107,.75)":"#0d1016";
+    cx.lineWidth=f.ecr?1.6:0.7; cx.stroke();
+  }
+  for(let i=0;i<RG.length;i++) for(let j=0;j<LB.length;j++){
+    const p=m[i][j]; if(!p) continue;
+    const q=proj(gx(j),gy(i),z(p[ig]));
+    pts.push({x:q[0],y:q[1],i,j,p});
+    if(p[4]){ cx.beginPath(); cx.arc(q[0],q[1],4.2,0,7); cx.fillStyle="#0d1016";
+      cx.fill(); cx.strokeStyle="#ff6b6b"; cx.lineWidth=1.8; cx.stroke(); }
+  }
+  const g=GR[ig];
+  document.getElementById("leg").innerHTML=
+    "Couleur et relief : <b>"+g[1]+"</b> — "+g[3]+
+    ". Échelle commune aux quatre cas, de 0 à "+hi.toFixed(1)+" "+g[2]+
+    ". <span style='color:#ff6b6b'>⬤ cerclé</span> : diode écrêtée par son "+
+    "claquage, l'altitude est un plancher et non une mesure.";
+  resume();
+}
+function resume(){
+  const m=D[cas], nav=m.flat().filter(p=>p&&p[4]).length;
+  const vals=m.flat().filter(Boolean).map(p=>p[0]);
+  const vbr=CAS.find(c=>c[0]===cas)[2];
+  document.getElementById("lecture").innerHTML= nav
+    ? "<b style='color:#ff6b6b'>"+nav+" mailles sur 30 en avalanche.</b> "+
+      "La diode est écrêtée à "+vbr+" V : sur ces points le pic réel n'est "+
+      "pas mesurable, seule la puissance dissipée l'est. Un composant qui "+
+      "travaille là n'est pas dimensionné, il est protégé par son claquage."
+    : "<b style='color:#3ddc84'>Aucune avalanche sur la grille.</b> "+
+      "Dépassement de "+Math.min(...vals).toFixed(1)+" à "+
+      Math.max(...vals).toFixed(1)+" V, pour un claquage à "+vbr+" V — "+
+      "marge minimale "+(vbr-80-Math.max(...vals)).toFixed(0)+" V.";
+  let t="<table><tr><th>R<sub>g</sub> \\ L<sub>σ</sub></th>"+
+    LB.map(l=>"<th>"+(l*1e9).toFixed(0)+" nH</th>").join("")+"</tr>";
+  for(let i=0;i<RG.length;i++){
+    t+="<tr><td>"+RG[i]+" Ω</td>";
+    for(let j=0;j<LB.length;j++){const p=m[i][j];
+      t+=p?("<td"+(p[4]?" class='ecr'":"")+">"+p[ig].toFixed(ig===2?2:1)+
+            (p[4]?" ⚠":"")+"</td>"):"<td>—</td>";}
+    t+="</tr>";
+  }
+  document.getElementById("tab").innerHTML=t+"</table>";
+}
+/* --- survol --- */
+const bulle=document.getElementById("bulle");
+cv.addEventListener("mousemove",e=>{
+  const r=cv.getBoundingClientRect(), k=W/r.width;
+  const mx=(e.clientX-r.left)*k, my=(e.clientY-r.top)*k;
+  if(glisse){ az-=(mx-lx)*0.006/k*k; el=Math.max(-0.2,Math.min(1.35,el+(my-ly)*0.004));
+    lx=mx; ly=my; draw(); return; }
+  let best=null, bd=22*22;
+  for(const p of pts){const d=(p.x-mx)**2+(p.y-my)**2; if(d<bd){bd=d;best=p;}}
+  if(!best){bulle.style.display="none";return;}
+  const p=best.p, vbr=CAS.find(c=>c[0]===cas)[2];
+  bulle.innerHTML="<b>R<sub>g</sub> = "+RG[best.i]+" Ω · L<sub>σ</sub> = "+
+    (LB[best.j]*1e9).toFixed(0)+" nH</b><br>"+
+    "dépassement <b>"+p[0].toFixed(1)+" V</b><br>"+
+    "dV/dt "+p[1].toFixed(1)+" V/ns · di/dt "+p[2].toFixed(2)+" A/ns"+
+    (p[4] ? "<br><span style='color:#ff6b6b'><b>ÉCRÊTÉ à "+vbr+" V</b> — "+
+            p[3].toFixed(0)+" mW d'avalanche.<br>Le pic réel n'est pas "+
+            "mesurable ici.</span>"
+          : "<br><span style='color:#3ddc84'>marge "+
+            (vbr-80-p[0]).toFixed(0)+" V</span>");
+  bulle.style.display="block";
+  const bw=bulle.offsetWidth, bh=bulle.offsetHeight;
+  bulle.style.left=Math.min(best.x/k+14, r.width-bw-8)+"px";
+  bulle.style.top=Math.max(best.y/k-bh-10, 6)+"px";
+});
+cv.addEventListener("mouseleave",()=>bulle.style.display="none");
+let glisse=false, lx=0, ly=0;
+cv.addEventListener("mousedown",e=>{const r=cv.getBoundingClientRect(),k=W/r.width;
+  glisse=true; lx=(e.clientX-r.left)*k; ly=(e.clientY-r.top)*k; bulle.style.display="none";});
+addEventListener("mouseup",()=>glisse=false);
+cv.addEventListener("wheel",e=>{e.preventDefault();
+  zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY<0?1.1:0.9))); draw();},{passive:false});
+
+/* --- boutons --- */
+function boutons(id,liste,actif,cb){
+  const d=document.getElementById(id);
+  d.innerHTML=liste.map((x,k)=>
+    "<button data-k='"+k+"'"+(actif(k)?" class='on'":"")+">"+x+"</button>").join("");
+  d.querySelectorAll("button").forEach(b=>b.onclick=()=>{cb(+b.dataset.k);
+    boutons(id,liste,actif,cb); draw();});
+}
+function maj(){
+  boutons("bCas", CAS.map(c=>c[1]), k=>CAS[k][0]===cas, k=>cas=CAS[k][0]);
+  boutons("bGrandeur", GR.map(g=>g[1]), k=>k===ig, k=>ig=k);
+}
+maj(); draw();
+</script></body></html>

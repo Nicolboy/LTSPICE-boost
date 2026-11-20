@@ -82,11 +82,30 @@ VARIANTES = {
 # avec reseau thermique et claquage modelise vers 768 V.
 DIODE_SIC = "C6D04065A"
 LIB_SIC = LIB / "Wolfspeed" / "C6D04065A.lib"
+# CoolSiC G6 Infineon, 650 V / 4 A, deux broches et AUCUN `ddt()`. Le modele
+# Wolfspeed en place un a l'INTERIEUR d'un `if` discontinu sur le signe de la
+# tension : une derivee temporelle commandee par une condition qui bascule
+# empeche Newton de converger des que la diode sejourne au voisinage de zero
+# -- c'est-a-dire pendant tout le temps mort du DCM. L'Infineon s'en passe.
+DIODE_INF = "IDH04G65C6_L1"
+LIB_INF = LIB / "Infineon" / "CoolSiC_G6_650V.lib"
 
 DIODE = ("DV8PA22",
          "D(is=7e-05 rs=0.00741429 n=2.62377 xti=13.7366 bv=220 eg=0.71 "
          "cjo=6.85e-10 m=1 vj=5.36 tt=7.73585e-10 ikf=0 fc=0.5 "
          "ibv=1e-10 isr=-7.00037e-07 trs1=-0.00514056)")
+
+
+def texte_lib(chemin):
+    """Contenu d'une bibliotheque, pret a etre colle dans une netlist.
+
+    INLINE et non `.inc` : huit instances LTspice qui incluent le MEME
+    fichier se bloquent mutuellement sous Windows, et le symptome se
+    deguise en probleme de convergence (`Changing Tseed` en boucle).
+    """
+    t = chemin.read_bytes().decode("utf-8", "replace")
+    return chr(10).join(l for l in t.splitlines()
+                        if l.strip().lower() != ".end")
 
 
 def texte_sic():
@@ -177,7 +196,11 @@ def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
     # `.model` : son boitier et ses deux noeuds thermiques doivent etre
     # relies, sinon LTspice les laisse flotter et le modele thermique
     # diverge. Tc est tenu a l'ambiante, exprimee en volts.
-    if diode == "sic":
+    if diode == "inf":
+        nom_diode = DIODE_INF
+        diode_ligne = f"XD1  nda  nd   {DIODE_INF}"
+        modele_diode = texte_lib(LIB_INF)
+    elif diode == "sic":
         nom_diode = DIODE_SIC
         diode_ligne = "\n".join([
             f"XD1  nda  nd   ncase ntj ntc {DIODE_SIC}",

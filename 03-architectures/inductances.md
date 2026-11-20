@@ -709,6 +709,29 @@ n'est pas celle que cette section annonçait d'abord.
 
 ### 12.6 Les deux leviers, mesurés — et la diode qui les décide
 
+> **Surface complète et interactive :**
+> [`04-emi/surtension-3d.html`](../04-emi/surtension-3d.html) — les deux
+> balayages ci-dessous sont des **coupes** dans une grille de 120 points.
+> La page les montre en entier, tournante, avec ΔV, dV/dt ou di/dt au choix.
+
+![Surface 3D — surtension contre Rg et inductance de boucle](../04-emi/illustrations/surtension_surface_3d.png)
+
+**La lecture que les deux coupes ne pouvaient pas donner :** en DCM les deux
+diodes sont **plates à 2–3 V** sur toute la grille — ni $R_g$ ni $L_\sigma$
+n'ont de prise, le courant est déjà nul à l'enclenchement. En CCM c'est une
+pente, et la `V8PA22` y est **en avalanche sur 22 mailles sur 30**.
+
+| coin | mesuré | verdict |
+|---|---|---|
+| DCM · Si · 22 Ω · 2 nH | 2,8 V | marge **137 V** |
+| CCM · Si · **10 Ω** · 2 nH | 69,0 V | marge 71 V — mais **avalanche dès 5 nH** |
+| CCM · Si · **22 Ω** · 2 nH | **15,7 V** | marge 124 V, tient encore à 5 nH |
+| CCM · SiC · 10 Ω · 2 nH | 15,1 V | marge **555 V** |
+
+Le coin CCM à 10 Ω est une **arête, pas un plateau** : 3 nH de dérive au
+routage suffisent à détruire le composant. À 22 Ω le même point devient
+robuste. Avec la SiC, aucun point de la grille n'est contraignant.
+
 ![Surtension contre vitesse de commutation](../04-emi/illustrations/surtension_vs_vitesse.png)
 
 ![Surtension contre inductance de boucle](../04-emi/illustrations/surtension_vs_maille.png)
