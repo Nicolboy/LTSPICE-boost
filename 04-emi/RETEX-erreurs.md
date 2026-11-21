@@ -527,3 +527,70 @@ La **grille sonne à 226 MHz**, de 3,78 à 10,63 V. Elle reste dans le
 calibre, mais avec $R_g$ = 12,1 Ω, $L_g$ = 3 nH et $C_{iss}$ ≈ 1 nF
 l'amortissement calculé donne $Q pprox 0{,}2$ — donc **aucune sonnerie**.
 L'écart est à comprendre avant de s'appuyer sur ce front.
+
+## L — Le remède qui tue (2026-11-21)
+
+### L1 — Une option qui fait réessayer au lieu d'échouer
+
+`.options trtol=1`, posée pour aider la convergence d'un modèle raide :
+
+| | |
+|---|---|
+| avertissements « tolerance relaxed » | **116 270** |
+| journal | **14,4 Mo** |
+| temps simulé atteint | **5,84 × 10⁻¹³ s** sur 240 × 10⁻⁶ |
+| le même cas sans l'option | **échoue en 0,26 s** |
+
+C'est le concepteur qui a dû me dire « LTspice est mort ».
+
+> Un remède qui transforme un échec net en blocage sans fin est pire
+> que la panne. L'échec rapide est une information ; l'attente n'en est
+> pas une.
+
+### L2 — Avoir court-circuité son propre outillage
+
+`ltspice_run.lance()` **portait déjà** ce garde-fou, et son commentaire
+documentait la même faute du 2026-11-20 — « DEUX HEURES ». J'ai appelé
+`subprocess.run` à la main, avec un `timeout` de 2400 s et aucun contrôle
+de progression : douze cas, huit heures de calcul vide.
+
+**Chien de garde ajouté** à `lance()` : il lit le journal pendant le run
+et tue dès que les relâchements explosent. Mesuré contre un faux LTspice
+qui écrit sans avancer — **13 s** aux seuils normaux au lieu du délai
+complet. Première version fautive : elle ne comptait les relâchements que
+si le journal dépassait déjà 2 Mo, donc un cas peu bavard passait.
+
+### L3 — Abandonner un test qu'on a lancé
+
+J'avais lancé le balayage de remèdes (cshunt, Gear, trtol, itl4), puis
+abandonné la piste quand le concepteur a proposé de changer de modèle.
+**Je n'ai jamais lu le résultat.** Sur cette base j'ai écrit, deux fois,
+que le balayage de résistance de grille était « impossible ».
+
+Il ne l'était pas. `.options cshunt=1e-15` — 1 fF sur chaque nœud —
+fait converger toutes les valeurs, et déplace le témoin de **0,03 %**.
+`method=gear` et `itl4=500` échouent, Gear cassant même le cas témoin.
+
+### L4 — Un compromis annoncé sans l'avoir mesuré
+
+J'avais écrit : « $R_g$ = 10 Ω tue la surtension (129 → 82 V) mais coûte
+en commutation (16 → 87 mW) ». **Les deux moitiés sont fausses.** Mesuré :
+
+| $R_g$ | MOSFET | $V_{nsw}$ max | rendement |
+|---|---|---|---|
+| 2,2 Ω | 89,05 mW | 81,8 V | 96,32 % |
+| 4,7 Ω | 87,95 mW | 81,9 V | 96,31 % |
+| **10 Ω** | **89,39 mW** | **81,9 V** | **96,31 %** |
+| 22 Ω | 92,64 mW | 82,0 V | 96,28 % |
+| 47 Ω | 107,16 mW | 82,0 V | 96,16 % |
+
+**Il n'y a pas de compromis.** $V_{nsw}$ varie de 0,2 V sur une plage de
+21× — l'écrêtage vient de la **diode de corps**, qui se moque de la
+vitesse de commutation. Et la hausse de pertes venait du passage à un
+transistor réel, pas de la résistance de grille.
+
+Le vrai résultat : **2,2 à 10 Ω sont équivalents, au-delà de 22 Ω on
+paie.** Les 10 Ω retenus ont de la marge des deux côtés.
+
+> J'avais attribué deux effets à la même cause sans jamais faire varier
+> cette cause. Le balayage était à une option près.
