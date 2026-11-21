@@ -11,11 +11,26 @@ sur elles que les deux architectures se départagent. Elles sont donc
 
 **Ordre de priorité : EMI, puis pertes, puis volume, puis prix.**
 
-> **État : l'architecture DCM est retenue** (§9). L'hypothèse CCM est fermée
-> sur la base des simulations par éléments, avec une réserve explicite —
-> elle sera rouverte au moment des simulations EMI, seul domaine où elle
-> gardait un avantage chiffré. Le présent chapitre conserve sa
-> caractérisation, qui reste valide.
+> ## État au 2026-11-21 — le §9 est PÉRIMÉ, lire le §12
+>
+> La version précédente de cet encadré annonçait : *« l'architecture DCM est
+> retenue (§9), l'hypothèse CCM est fermée — elle sera rouverte au moment
+> des simulations EMI, seul domaine où elle gardait un avantage chiffré. »*
+>
+> **Ces simulations ont eu lieu, et elles ont rouvert le CCM.** L'arbitrage
+> CEM du chapitre 4 retient **`SER2211-473` 47 µH en CCM**, avec une
+> frontière DCM/CCM entre 10 et 20 W établie au §12 de ce chapitre.
+>
+> | ce qui reste valide | ce qui est périmé |
+> |---|---|
+> | la **caractérisation** des §1 à §6 : pertes fer et cuivre, thermique, transition de mode — mesures datées, opposables | le **choix** du §7 (`SER2013-472`, 4,7 µH) et l'**arbitrage** du §9 (DCM seul) |
+> | les §10 à §11 : amortissement mesuré, banc d'impédance | la ligne « modèle SPICE : oui » du tableau §7 — voir §10.4 |
+> | le §12, écrit le 2026-11-20, qui porte la décision courante | — |
+>
+> **Les prémisses courantes ne sont plus dans ce document.** Elles sont
+> déclarées dans [`../banc.toml`](../banc.toml), et le gendarme de banc
+> refuse toute netlist qui en diverge. Un document de chapitre date une
+> campagne ; il n'est plus la source de vérité du montage.
 
 ## 1. Contraintes
 
@@ -271,6 +286,23 @@ l'étage 2, hors périmètre de ce chapitre.
 ## 7. Choix
 
 ### Architecture 1 — DCM : **SER2013-472**, 4,7 µH
+
+> **PÉRIMÉ au 2026-11-21.** Ce choix est celui d'une campagne DCM seule. Il
+> est remplacé par `SER2211-473` 47 µH en CCM (arbitrage CEM, chapitre 4 ;
+> frontière DCM/CCM au §12). Deux motifs indépendants :
+>
+> 1. **Le modèle SPICE de la `SER2013-472` n'existe pas.** La ligne
+>    « modèle SPICE : oui » du tableau ci-dessous est fausse, et la
+>    $f_{rés}$ de 27,1 MHz sort d'une **reconstruction faite à la main**
+>    dont la capacité de 7,4 pF est inventée — voir §10.4 et l'en-tête de
+>    `lib_spice_commun/Coilcraft/SER2013-472.lib`. Elle n'est pas opposable.
+> 2. **L'arbitrage CEM a tranché dans l'autre sens** : le réseau d'entrée
+>    réel et la tenue d'émission à la frontière de mode imposent 47 µH.
+>
+> Le raisonnement en deux temps ci-dessous — tenue du mode d'abord, critère
+> thermique ensuite — **reste la bonne méthode**, et la mise à l'écart de
+> la `SER1360-472` sur ses 95 °C reste acquise. C'est la conclusion qui a
+> bougé, pas la démarche.
 
 Le choix se fait en deux temps, et le premier reste inchangé : **4,7 µH**
 est la seule valeur qui tienne le mode au cas dimensionnant 12 V / 25 W
@@ -621,6 +653,24 @@ L=\frac{V_{in}^2\,D\,\eta}{2\,P_\text{lim}\,f_{sw}}$$
 | 20 W | 16,7 µH |
 | 15 W | 22,3 µH |
 | 10 W | 33,4 µH |
+
+> ### ⚠ Et ce tableau contredit la pièce retenue
+>
+> À 400 kHz, la cible 10–20 W demande **16,7 à 33,4 µH**. La pièce retenue
+> est la **`SER2211-473`, 47 µH** — au-delà de la borne haute. La même
+> formule lui donne une frontière de **7,11 W**, et le tableau *mesuré* du
+> chapitre 1 §5 dit **7,98 W** : les deux concordent à 10,9 % près, écart
+> systématique sur quatre fréquences.
+>
+> **La combinaison 47 µH / 400 kHz place donc la frontière sous la plage
+> visée**, d'un facteur 1,3 à 2,5 selon la borne. Trois leviers chiffrés et
+> l'arbitrage attendu : voir l'encadré du
+> [chapitre 1](../01-frequence-inductance/README.md). Le plus économe est
+> la **`SER2211-333`, 33 µH, dans le boîtier déjà choisi** — 10,1 W.
+>
+> Noter que les 400 kHz viennent du §11.9 du chapitre 2, paragraphe
+> explicitement non simulé, qui les justifiait par le DCM permanent à
+> 4,7 µH — la stratégie que le présent §12 abandonne.
 
 La fenêtre impose **16,7 à 33,4 µH**. Valeurs normalisées à l'intérieur :
 18, 22, 27, 33 µH. Aucune des quatre n'était dans la liste courte initiale —

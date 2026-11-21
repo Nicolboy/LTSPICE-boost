@@ -6,9 +6,29 @@ différé : « technologie transistor/diode » et « pertes de commutation ».
 
 > **État** : switch et diode **réels** (modèles simples mais paramétrés
 > sur des pièces réelles), inductance balayée sur 3 valeurs dans la même
-> famille/boîtier que le chapitre 1. Pas de modèle vendeur complet
-> (licence, lenteur) — c'est l'objet d'une éventuelle passe de
-> raffinement ultérieure, sur moins de paramètres libres.
+> famille/boîtier que le chapitre 1.
+
+> **Mise à jour du 2026-11-21 — la passe de raffinement a eu lieu.** Cet
+> encadré annonçait *« pas de modèle vendeur complet (licence, lenteur) »*.
+> Les modèles constructeur **Wolfspeed, Infineon, Vishay et EPC** tournent
+> désormais dans les bancs du chapitre 4, et les deux motifs invoqués
+> étaient faux :
+>
+> - **la licence n'était pas l'obstacle** : les modèles sont publiés et
+>   librement téléchargeables, rassemblés dans `lib_spice_commun` ;
+> - **la lenteur non plus** : un cas converge en 1,7 s.
+>
+> Le vrai obstacle était l'option **`uic`**, qui prive les nœuds internes
+> d'un modèle encapsulé de point de fonctionnement et rend la matrice
+> singulière. Retirée, les modèles passent **tels quels, sans aucune
+> retouche**. Trois heures perdues à chercher ailleurs — faute D1 du
+> [retour d'expérience](../04-emi/RETEX-erreurs.md).
+>
+> Conséquence pour ce chapitre : ses conclusions tirées de modèles
+> *paramétrés à la main* sont à rapprocher de la matrice du chapitre 4,
+> mesurée sur modèles constructeur. Un substitut n'est pas une mesure
+> (faute C2) : un modèle silicium retouché pour imiter une SiC avait donné
+> la conclusion **inverse** des vrais modèles.
 
 > ⚠️ **Le §11 étend ce chapitre à 200-800 kHz et nuance fortement sa
 > conclusion §6.2** (« Si et GaN quasiment indiscernables »). Ce constat
@@ -1248,6 +1268,32 @@ tard**, pas une décision d'architecture : il suffit de prévoir le diviseur
 et une entrée CMPSS au routage.
 
 ### 11.10 Deux architectures à comparer au chapitre suivant
+
+> **Comparaison faite — résultat au 2026-11-21.** Ce paragraphe posait deux
+> candidates ; les chapitres 3 et 4 ont tranché, et **ni l'une ni l'autre
+> telle quelle** :
+>
+> **`SER2211-473` 47 µH, DCM sous 10–20 W et CCM au-dessus** — donc pas le
+> DCM permanent à 4,7 µH de la piste 1, ni le CCM franc de la piste 2, mais
+> la **traversée de frontière** que la piste 2 proposait justement de
+> mesurer. Le chapitre 3 §12 l'établit, l'arbitrage CEM du chapitre 4 la
+> confirme.
+>
+> **Ce que la mesure a dit contre l'attente** : la piste 1 misait sur une
+> « signature CEM unique » du DCM. Le réseau d'entrée réel — 220 µF ∥
+> (1000 µF + 500 mΩ) ∥ 1 µF — y développe une **résonance entretenue à
+> 0,80 fois la fréquence de découpage**, 60,9 V crête-à-crête sur une
+> entrée à 20 V. L'avantage CEM supposé du DCM ne survit pas au réseau
+> d'entrée du montage réel.
+>
+> **Sur la diode** : la matrice du chapitre 4 (44 cellules, modèles
+> constructeur) place la **Schottky silicium `V8PA22`** à égalité avec le
+> SiC `C3D16065D1` de 16 A, et **au double de performance** du CoolSiC G6
+> de 4 A — 384 mW contre 809 à 40 W. « Schottky » était donc le bon réflexe,
+> mais pour une raison que ce chapitre n'avait pas : la surface de puce,
+> pas la technologie.
+>
+> Prémisses courantes : [`../banc.toml`](../banc.toml).
 
 1. **GaN en DCM permanent, 400 kHz** — 4,7 µH, EPC2007C ou EPC2052,
    Schottky. Signature CEM unique, pas de zéro à droite, ZVS partiel

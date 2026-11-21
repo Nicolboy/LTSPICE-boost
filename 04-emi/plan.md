@@ -244,11 +244,14 @@ après 24 d'établissement.
 | transistor / diode | `EPC2207` GaN · `V8PA22` Schottky Si 200 V |
 | entrée | 220 µF ∥ (1000 µF + 500 mΩ) ∥ 1 µF X7R |
 | LISN | CISPR 25, 5 µH, mesure en tension |
-| **$R_g$ / front** | **1 Ω / 150 ps → 385 V/ns** ⚠ non justifié |
+| **$R_g$ / front** | **1 Ω / 150 ps → 385 V/ns** ⚠ figure non reprise |
 | fenêtre | 24 + 16 périodes, pas max 0,5 ns |
 
-> ⚠ Contenu HF à reprendre : à 10 Ω le $dV/dt$ tombe à 73 V/ns. Le pic de
-> 88 MHz est très probablement un artefact de cette vitesse.
+> ⚠ **Vitesse tranchée depuis le 2026-11-21 : $R_g = 10\ \Omega$, 73 V/ns**,
+> déclarée avec sa justification dans [`../banc.toml`](../banc.toml). La
+> figure ci-dessus a été relevée à 385 V/ns, valeur héritée et jamais
+> choisie. **Son contenu HF reste à reprendre** ; le pic de 88 MHz est très
+> probablement un artefact de cette vitesse.
 
 </details>
 

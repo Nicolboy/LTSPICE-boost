@@ -11,6 +11,42 @@ en texte brut (`.asc`), lancent la simulation en mode batch, parsent les
 résultats `.meas`, et tracent les graphiques — tout est reproductible
 depuis les scripts, aucun résultat n'est recopié à la main.
 
+> ## État au 2026-11-21 — où lire quoi
+>
+> **Les prémisses du montage sont dans [`banc.toml`](banc.toml), pas dans
+> les chapitres.** Un chapitre **date une campagne** ; il n'est plus la
+> source de vérité du circuit. Le gendarme de banc refuse toute netlist
+> qui diverge de la fiche — inductance, mode, diode, réseau d'entrée,
+> vitesse de commutation.
+>
+> | | état |
+> |---|---|
+> | inductance · mode | `SER2211-473` 47 µH · DCM sous la frontière, CCM au-dessus |
+> | diode | matrice de 44 cellules sur modèles constructeur — `V8PA22` Si et `C3D16065D1` SiC à égalité, CoolSiC G6 au double de pertes |
+> | vitesse de commande | **tranchée à $R_g = 10\ \Omega$, 73 V/ns** — les figures HF publiées sont à 385 V/ns et restent à reprendre |
+> | méthode | 60 fautes recensées dans [`04-emi/RETEX-erreurs.md`](04-emi/RETEX-erreurs.md), converties en refus exécutables |
+>
+> **Périmé, et signalé sur place** : le choix `SER2013-472` 4,7 µH du
+> chapitre 3 §7 (son modèle SPICE est une reconstruction faite à la main,
+> pas un modèle Coilcraft), l'arbitrage « DCM seul » du §9, et le verdict
+> 200 kHz du chapitre 1.
+>
+> ### ⚠ Une contradiction ouverte, non arbitrée
+>
+> Le chapitre 3 §12 fixe la frontière DCM/CCM **entre 10 et 20 W**. La
+> combinaison retenue — **47 µH à 400 kHz** — la place à **7,98 W mesurés**
+> (7,11 W par la formule du §12.1, concordance à 10,9 %). Elle est donc
+> **sous la plage visée**.
+>
+> Les 400 kHz viennent du §11.9 du chapitre 2, paragraphe explicitement non
+> simulé, qui les justifiait par le DCM permanent à 4,7 µH — stratégie
+> abandonnée depuis. **Le réglage a survécu à sa justification.**
+>
+> Trois leviers chiffrés, dont la `SER2211-333` 33 µH dans le boîtier déjà
+> choisi (10,1 W) : voir l'encadré du
+> [chapitre 1](01-frequence-inductance/README.md). **Décision de conception
+> attendue**, pas une correction de document.
+
 ![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
 
 Le passage de **4,7 µH en conduction discontinue** à **47 µH en conduction
@@ -28,16 +64,24 @@ zéro à chaque cycle.
 | diode | `V8PA22` Schottky Si 200 V, modèle Vishay |
 | réseau d'entrée | 220 µF ∥ (1000 µF + 500 mΩ) ∥ 1 µF X7R |
 | réseau stabilisateur | LISN CISPR 25, 5 µH, mesure en tension |
-| **$R_g$ / front de commande** | **1 Ω / 150 ps → 385 V/ns** ⚠ |
+| **$R_g$ / front de commande** | **1 Ω / 150 ps → 385 V/ns** ⚠ figure non reprise |
 | fenêtre | 24 périodes d'établissement + 16 de mesure, pas max 0,5 ns |
 | amortissement inductance | `PkZ` constructeur, non balayé |
 
-> ⚠ **$R_g = 1\ \Omega$ et 150 ps, c'est l'extrême physique d'un GaN** —
-> une valeur héritée du banc, jamais choisie. À 10 Ω on tombe à 73 V/ns,
-> cinq fois moins. **Tout le contenu haute fréquence de ce spectre est donc
-> à reprendre**, en particulier le pic vers 88 MHz. Les bandes basses, qui
-> dépendent du mode de conduction et non de la vitesse, ne sont pas
-> affectées.
+> ⚠ **Cette figure a été relevée à une vitesse qui n'était pas choisie.**
+> $R_g = 1\ \Omega$ et 150 ps, c'est l'extrême physique d'un GaN, hérité du
+> banc. **Depuis le 2026-11-21 la vitesse est tranchée à $R_g = 10\ \Omega$,
+> soit 73 V/ns** — cinq fois moins — et elle est déclarée avec sa
+> justification dans [`banc.toml`](banc.toml).
+>
+> **Tout le contenu haute fréquence de cette figure reste donc à reprendre**,
+> en particulier le pic vers 88 MHz. Les bandes basses, qui dépendent du
+> mode de conduction et non de la vitesse, ne sont pas affectées.
+>
+> Les prémisses courantes du montage ne sont plus dans ce README : elles
+> sont dans `banc.toml`, et le gendarme de banc refuse toute netlist qui en
+> diverge. Un tableau de paramètres dans un document **date une figure** ; il
+> ne décrit plus le montage.
 
 </details>
 

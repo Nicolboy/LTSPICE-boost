@@ -13,6 +13,48 @@ croisée avec un calcul analytique.
 > (méthode incrémentale : un seul paramètre réel à la fois, le reste
 > idéal).
 
+> ## Mise à jour du 2026-11-21 — le projet tourne à 400 kHz, et le §5 de ce chapitre dit pourquoi c'est à revoir
+>
+> Le **verdict de ce chapitre est 200 kHz** (§5). Les chapitres 3 et 4
+> simulent à **400 kHz**, et [`../banc.toml`](../banc.toml) le déclare.
+>
+> **D'où vient ce 400 kHz.** Du §11.9 du chapitre 2 — un paragraphe qui
+> porte lui-même l'avertissement *« tout ce paragraphe est ANALYTIQUE…
+> rien n'en est simulé… à vérifier avant d'en faire une décision de
+> conception »*. Il justifiait 400 kHz par le **DCM permanent à 4,7 µH**,
+> stratégie **abandonnée depuis** : le chapitre 3 §12 assume désormais la
+> traversée de frontière, entre 10 et 20 W. **Le 400 kHz a survécu à la
+> prémisse qui le portait.**
+>
+> **Et le tableau mesuré du §5 de ce chapitre tranche la question**, à
+> 47 µH, de 20 vers 80 V :
+>
+> | $f_{sw}$ | frontière DCM/CCM mesurée | dans la cible 10–20 W ? |
+> |---|---|---|
+> | 100 kHz | 31,9 W | non, trop haut |
+> | **200 kHz** | **15,96 W** | **oui, au centre** |
+> | 300 kHz | 10,64 W | oui, en bas de plage |
+> | 400 kHz | **7,98 W** | **non — sous la plage** |
+>
+> Recoupé par la formule du chapitre 3 §12.1,
+> $L = V_{in}^2 D\eta / (2 P_\text{lim} f_{sw})$, qui donne 7,11 W pour
+> 47 µH à 400 kHz : les deux méthodes concordent à **10,9 % près, écart
+> systématique sur les quatre fréquences** — elles sont donc comparables,
+> et d'accord.
+>
+> **Trois façons de ramener la frontière dans la cible**, toutes chiffrées :
+>
+> | levier | frontière | remarque |
+> |---|---|---|
+> | `SER2211-333` **33 µH** à 400 kHz | 10,1 W | **même boîtier déjà choisi**, la série porte cette valeur (§6.4) |
+> | 47 µH à **284 kHz** | 10 W | bas de plage |
+> | 47 µH à **190 kHz** | 15 W | ≈ le verdict mesuré de ce chapitre |
+>
+> **Arbitrage non rendu** — c'est une décision de conception, pas une
+> correction de document. Les trois leviers déplacent aussi les pertes de
+> commutation, le volume magnétique et le spectre conduit, qu'il faut
+> reprendre ensemble.
+
 ## 1. Pourquoi cette étude
 
 Deux choix à justifier par la mesure : la fréquence de découpage, et
