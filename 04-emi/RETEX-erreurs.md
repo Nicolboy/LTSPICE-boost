@@ -782,3 +782,49 @@ caractéristique d'une structure à tranchées — la FDD770N15A, de
 technologie différente, n'en a pas.
 
 > constant, donc $Q = I\,t$.
+
+## P — Vérifier contre une source, et vérifier la source
+
+### P1 — Ce que la confrontation confirme
+
+| grandeur | fiche Rev 2.6 | extrait du modèle | écart |
+|---|---|---|---|
+| $C_{oss}$ @ 75 V | 80 pF | **80,0 pF** | **0,0 %** |
+| $Q_{oss}$ @ 75 V | 22 nC | **22,0 nC** | **0,0 %** |
+| $Q_g$ @ 10 V | 8,7 nC | **8,74 nC** | +0,5 % |
+
+Trois grandeurs indépendantes à moins de 1 %. Et la **figure 11** de la
+fiche montre le genou de déplétion entre 30 et 40 V ; mon extraction le
+place à **35,8 V**. Le décrochement était donc bien réel, et publié.
+
+Sur les définitions, la documentation constructeur confirme la
+hiérarchie mesurée $C_{o(tr)} > C_{o(er)} > C_{oss}$. La fiche onsemi
+publie d'ailleurs les deux premières côte à côte — 64 contre 113 pF,
+rapport 1,77 — quand j'obtiens 2,11 sur l'Infineon. Même ordre, même
+sens.
+
+### P2 — La référence lue à l'œil ne valait rien
+
+J'ai relevé dix points sur la figure 11 et annoncé **4/10 dans la
+fourchette**, mon extraction ressortant haute d'un facteur 1,5 à 2 sous
+40 V. J'ai failli conclure que le modèle dérivait à basse tension.
+
+Test de cohérence interne : la fiche donne **deux choses liées** — la
+courbe, et $Q_{oss}$ = 22 nC au tableau, qui en est l'intégrale.
+
+| source | $Q_{oss}$ @ 75 V |
+|---|---|
+| tableau électrique | 22,0 nC |
+| extraction du modèle | **22,0 nC** |
+| **ma lecture de la figure** | **15,1 nC — −31 %** |
+
+C'est ma lecture qui était fausse, et précisément sous 40 V où une
+échelle logarithmique écrase tout.
+
+> Une source ne peut arbitrer que si elle est cohérente avec elle-même.
+> Tester cette cohérence coûte une ligne, et c'est ce qui sépare une
+> vérification d'une impression.
+
+Le réflexe à garder : quand une fiche publie à la fois une courbe et
+une intégrale de cette courbe, **intégrer la courbe lue** avant de s'en
+servir comme étalon.
