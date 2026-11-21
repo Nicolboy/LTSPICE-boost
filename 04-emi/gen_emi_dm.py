@@ -72,8 +72,20 @@ C_BULK220 = ("220 uF Al (ESR POSEE)",     220e-6, 20.0e-3,  8.0e-9, 0.0)
 C_AMORTIE = ("1000 uF Al + 500 mOhm",    1000e-6, 20.0e-3, 12.0e-9, 0.5)
 C_MLCC    = ("1 uF X7R 0805 - 885012207103", 1.0e-6, 5.31e-3, 283e-12, 0.0)
 
+# --- CONFIGURATION FINALE du 2026-11-21, references arretees ---------------
+# Le bulk passe de 220 uF POSE a un hybride Panasonic MESURE (ESR de fiche),
+# et le MLCC gagne ses 0,2 Ohm d'amortissement : nu, il DEGRADE l'impedance
+# entre 1 et 5 MHz par anti-resonance avec l'ESL de l'electrolytique --
+# 61 -> 441 mOhm a 2 MHz a l'entree. Verifie sur les modeles constructeur.
+C_HYB270  = ("Panasonic EEH-ZC 270 uF/35 V", 270e-6, 20.0e-3,  4.0e-9, 0.0)
+C_MLCC1812 = ("1 uF X7R 200 V 1812 + 0,2 R", 0.92e-6, 4.0e-3, 1.6e-9, 0.2)
+
 VARIANTES = {
-    "complet":   [C_BULK220, C_AMORTIE, C_MLCC],   # l'architecture retenue
+    "complet":   [C_BULK220, C_AMORTIE, C_MLCC],   # chapitre 4, conserve tel quel
+    "final":     [C_HYB270, C_AMORTIE, C_MLCC1812],   # configuration arretee
+    "final_nu":  [C_HYB270, C_AMORTIE,
+                  ("1 uF X7R 1812 SANS amortissement", 0.92e-6, 4.0e-3,
+                   1.6e-9, 0.0)],                     # pour chiffrer les 0,2 R
     "sans_amor": [C_BULK220, C_MLCC],              # ce que la R rapporte
 }
 
@@ -126,9 +138,10 @@ def sous_circuit(fichier, nom):
     return m.group(0).strip()
 
 
-def duty_dcm(pout, vin=VIN, eta=0.97, l_h=None):
+def duty_dcm(pout, vin=VIN, eta=0.97, l_h=None, fsw=None):
     l_h = INDUCTANCES[IND_DEFAUT][1] if l_h is None else l_h
-    return math.sqrt(2.0 * pout * l_h * FSW * (VOUT - vin)
+    fsw = FSW if fsw is None else fsw
+    return math.sqrt(2.0 * pout * l_h * fsw * (VOUT - vin)
                      / (eta * vin**2 * VOUT))
 
 
@@ -162,7 +175,8 @@ def duty_ccm():
 
 
 def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
-            ind=IND_DEFAUT, diode="si", rg=None, lb=None, tr=None):
+            ind=IND_DEFAUT, diode="si", rg=None, lb=None, tr=None,
+            fsw=None, mos="epc"):
     """Banc complet.
 
     `ind` designe l'inductance dans INDUCTANCES. `rp` ne sert plus qu'a
@@ -170,6 +184,25 @@ def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
     c'est la valeur publiee qui s'applique -- et c'est ce qu'on veut.
     """
     nom_l, l_h, dcr_l, cp_l, rp_l, rc_l = INDUCTANCES[ind]
+    # TRANSISTOR. Brochages LUS dans les .subckt, jamais devines (faute C3) :
+    #   EPC2207      : gate drain source            -- 3 noeuds
+    #   IPD530N15N3  : drain gate source Tj Tcase   -- 5 noeuds
+    if mos == "ipd530":
+        # TENSION DE GRILLE PROPRE A LA PIECE. Les 5 V du banc sont ceux du
+        # GaN EPC2207, dont c'est le maximum absolu. Un OptiMOS 150 V a 5 V
+        # de grille conduirait a peine -- son Rds(on) est specifie a 10 V,
+        # et son seuil peut monter a 4 V. Attrape avant de lancer.
+        vgs = 10.0
+        nom_mos = "Infineon IPD530N15N3 150 V DPAK"
+        bloc_mos = "\n".join(("X1   nsw  ng   nss ntj ntc IPD530N15N3",
+                              "Rtj  ntj  nret 1meg",
+                              "Vtc  ntc  nret DC 25"))
+        lib_mos = texte_lib(LIB / "Infineon" / "OptiMOS3_150V_LTSpice.lib")
+    else:
+        vgs = VGS          # 5 V : le maximum absolu de l'EPC2207
+        nom_mos = "EPC2207 GaN"
+        bloc_mos = "X1   ng   nsw  nss  EPC2207"
+        lib_mos = ""
     # VITESSE DE COMMUTATION : Rg est le levier REEL du concepteur,
     # `tr` le front propre au driver. 1 ohm et 150 ps etaient la
     # valeur par defaut de ce banc -- l'extreme physique, jamais
@@ -179,16 +212,20 @@ def netlist(rp=None, duty=None, n_etab=24, n_mes=16, dtmax=0.5e-9, cin=None,
     tr = 0.15e-9 if tr is None else tr
     if rp is not None:
         rp_l = rp
-    tsw = 1.0 / FSW
+    # FREQUENCE AU CHOIX. Le defaut reste 400 kHz pour que les figures
+    # publiees du chapitre 4 restent reproductibles ; la configuration
+    # arretee le 2026-11-21 tourne a 200 kHz.
+    fsw = FSW if fsw is None else fsw
+    tsw = 1.0 / fsw
     # CCM des que la frontiere est franchie : 7,1 W pour 47 uH, donc
     # toujours ici. Le rapport cyclique n'y depend plus de la charge.
-    d_i = VIN * duty_ccm() / (l_h * FSW)
+    d_i = VIN * duty_ccm() / (l_h * fsw)
     ccm = (P_VISEE / 0.97 / VIN) >= d_i / 2
     if duty is None:
         # PASSER l_h : sans lui, duty_dcm retombe sur l'inductance par
         # defaut et on applique le rapport cyclique d'une 47 uH a une
         # 4,7 uH -- 94 A dans la self, constate.
-        duty = duty_ccm() if ccm else duty_dcm(P_VISEE, l_h=l_h)
+        duty = duty_ccm() if ccm else duty_dcm(P_VISEE, l_h=l_h, fsw=fsw)
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
     i_in = P_VISEE / 0.97 / VIN                 # courant continu d'entree
     cin = VARIANTES["complet"] if cin is None else cin
@@ -232,7 +269,11 @@ Vbat bp   0    DC {VIN}
 * DEUX bornes deriver ensemble -- 0,04 V entre elles au demarrage. Mesure
 * de MODE DIFFERENTIEL pur, ce qui est l'objet de l'etape B ; le mode
 * commun demande un chassis, absent du modele (etape D).
-Rret nret 0    1e-6
+* 1 mOhm et non 1 uOhm : le noeud reste DISTINCT pour la mesure LISN, mais
+* 1e-6 est un quasi-court-circuit qui rend la matrice mal conditionnee --
+* signale par le gendarme (D2), et invisible tant que `uic` sautait le
+* point de fonctionnement.
+Rret nret 0    1e-3
 
 * --- LISN CISPR 25, APLATI et non appele en sous-circuit : `.ic` ne sait
 * pas viser le courant d'une inductance interne a un .subckt, et sans
@@ -271,17 +312,18 @@ L1   n1l  nsw  {l_h:.4e}
 Cp_l n1l  n2l  {cp_l:.4e}
 Rc_l n2l  nsw  {max(rc_l, 1e-9):.6g}
 
-* --- commutation (diode : {nom_diode})
-X1   ng   nsw  nss  EPC2207
+* --- commutation (diode : {nom_diode}, transistor : {nom_mos})
+{bloc_mos}
 Vs   nss  nret DC 0
 Rg   ngd  ng   {rg:.4g}
-Vg   ngd  nret PULSE(0 {VGS} 0 {tr:.4e} {tr:.4e} {{duty*TSW}} {{TSW}})
+Vg   ngd  nret PULSE(0 {vgs} 0 {tr:.4e} {tr:.4e} {{duty*TSW}} {{TSW}})
 Lb   nsw  nda  {lb:.4e}
 {diode_ligne}
 Vd   nd   nout DC 0
 Vo   nout nret DC {VOUT}
 
 {modele_diode}
+{lib_mos}
 
 
 * Conditions initiales : sans elles, la resonance LISN/Cin -- quelques
@@ -289,8 +331,19 @@ Vo   nout nret DC {VOUT}
 * et le spectre serait celui du demarrage, pas du regime etabli.
 .ic I(L_line_p)={i_in:.4f} V(nin)={VIN:.3f} {ic_cin}
 
+* cshunt : 1 fF sur CHAQUE noeud. Physiquement negligeable -- mille fois
+* moins que n'importe quelle capacite parasite -- mais suffisant pour que
+* le pas de temps ne s'effondre pas a 1e-14 s quand un modele encapsule y
+* bascule une source comportementale. PREFERE a une capacite explicite sur
+* le noeud de commutation : celle-la adoucirait les fronts et fausserait
+* le contenu HF, qui est justement l'objet de la mesure.
+.options cshunt=1e-15
 .options reltol=1e-4 abstol=1e-11 vntol=1e-7 plotwinsize=0
-.tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e} uic
+* `.ic` SANS `uic` : le point de fonctionnement est CALCULE, donc les
+* noeuds internes des modeles encapsules ont un etat coherent, et les
+* condensateurs sont tout de meme pre-charges. Avec `uic` l'OptiMOS 3
+* n'a aucun etat initial et la matrice est singuliere (faute D1).
+.tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
 
 .save V(mp) V(nin) V(nsw) V(nda) I(Vl) I(Vbat) I(Vd) I(Vs)
 .meas TRAN pout AVG {VOUT}*I(Vd)  FROM {t0:.6e} TO {t1:.6e}
