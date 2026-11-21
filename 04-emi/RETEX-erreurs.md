@@ -691,3 +691,52 @@ recoupé à 89,36 mW en incluant la grille, et le bilan ferme à 0,02 %.
 À 8 W en DCM, **près de la moitié des pertes est dans la résistance
 parallèle de l'inductance**, pas dans les semi-conducteurs. Le levier
 n'est pas là où toute la session l'a cherché.
+
+## O — $C_{oss}$ est une fonction (2026-11-21)
+
+J'avais posé en hypothèse : « $C_{oss}$ n'est pas constante, donc la
+sonnerie libre l'échantillonne là où elle est grande ». Bonne direction,
+**mauvaise formulation**. $C_{oss}(v)$ est une fonction, et selon ce qu'on
+calcule on en prend une intégrale **différente** :
+
+$$\Large C_{o(tr)}(V) = rac{1}{V}\int_0^V C_{oss}(v)\,dv = rac{Q_{oss}(V)}{V}$$
+
+$$\Large C_{o(er)}(V) = rac{2}{V^2}\int_0^V v\,C_{oss}(v)\,dv = rac{2E_{oss}(V)}{V^2}$$
+
+Mesuré sur l'IPD530N15N3 à 75 V :
+
+| | valeur | rapport |
+|---|---|---|
+| $C_{oss}(V)$ différentielle | **78,7 pF** — fiche 80 | 1,00 |
+| $C_{o(er)} = 2E_{oss}/V^2$ | **168,4 pF** | 2,14 |
+| $C_{o(tr)} = Q_{oss}/V$ | **293,3 pF** | **3,73** |
+
+Un facteur **3,7** entre la première et la dernière. La fiche onsemi
+publie d'ailleurs les deux côte à côte — $C_{oss}$ 64 pF contre
+$C_{oss(er)}$ 113 pF — et l'écart s'y lit directement.
+
+**Laquelle prendre.** $C_{o(tr)}$ fixe la durée de transition,
+$C_{o(er)}$ l'énergie commutée, $C_{oss}(V)$ une résonance petit signal
+autour de $V$. Aucune des trois n'est interchangeable, et la valeur de
+fiche n'est que la troisième.
+
+### Ce que cela corrige
+
+**« 69 pF déduits du temps mort » est à retirer.** La forme d'onde y est
+écrêtée par la diode de corps — le drain reste plat à 0 V pendant 300 ns.
+Un pic de FFT sur un signal écrêté ne désigne aucune résonance.
+
+**« 511 pF en sonnerie libre »** reste valable, mais comme une mesure
+*petit signal* autour d'une tension basse. À 5 V la différentielle vaut
+727 pF : les deux sont cohérents.
+
+### Et une faute de méthode sur la figure
+
+Premier calcul : $C_{oss} = I/(dV/dt)$ point par point. La rampe marque
+des paliers numériques où $dV/dt$ frôle zéro, et le quotient explosait à
+10⁶ F — des pics à 10¹⁸ pF en travers de la figure.
+
+> $C_{oss} = dQ/dV$ se lit sur des **intervalles** de tension, jamais par
+> un quotient par une quantité qui peut s'annuler. $Q_{oss}$ et $E_{oss}$,
+> eux, s'obtiennent sans aucune dérivée : la rampe est à courant
+> constant, donc $Q = I\,t$.
