@@ -43,10 +43,15 @@ VMAX = np.array([81.8, 81.9, 81.9, 82.0, 82.0])
 TOT = np.array([298.79, 297.81, 298.72, 302.30, 319.24])
 REND = np.array([96.32, 96.31, 96.31, 96.28, 96.16])
 
-# (grandeur, Infineon extrait, onsemi fiche typ, onsemi fiche max, unite)
-PIECES = (("$R_{ds(on)}$", 53.0, 61.0, 77.0, "mΩ"),
-          ("$C_{oss}$ @ 75 V", 79.9, 64.0, 85.0, "pF"),
-          ("$Q_g$ @ 10 V", 8.74, 8.4, 11.0, "nC"))
+# LES DEUX FICHES EN MAIN. Plus aucune valeur extraite ici : la fiche
+# IPD530N15N3 Rev 2.6 est arrivee, et elle a VALIDE l'extraction a mieux
+# qu'un pour cent -- Coss 79,9 contre 80 typ, Qg 8,74 contre 8,7, Qoss
+# 22,0 contre 22. La methode etait bonne ; on n'en a plus besoin.
+# (grandeur, Infineon typ, Infineon max, onsemi typ, onsemi max, unite)
+PIECES = (("$R_{ds(on)}$", 44.0, 53.0, 61.0, 77.0, "mΩ"),
+          ("$C_{oss}$ @ 75 V", 80.0, 106.0, 64.0, 85.0, "pF"),
+          ("$Q_g$ @ 10 V", 8.7, 12.0, 8.4, 11.0, "nC"),
+          ("$Q_{rr}$", 229.0, 229.0, 109.0, 109.0, "nC"))
 
 
 def pose(a):
@@ -115,20 +120,24 @@ def main() -> int:
     a = fig.add_subplot(gs[0, 2])
     pose(a)
     y = np.arange(len(PIECES))[::-1]
-    for i, (nom, inf, ty, mx, u) in enumerate(PIECES):
+    for i, (nom, it, im, ot, om, u) in enumerate(PIECES):
         yy = y[i]
-        # on normalise sur le typique onsemi pour rendre les 3 comparables
-        a.barh(yy + .17, 100.0, .32, color=VE, alpha=.55, edgecolor=F)
-        a.barh(yy + .17, 100 * mx / ty - 100, .32, left=100, color=VE,
-               alpha=.22, edgecolor=F)
-        a.barh(yy - .19, 100 * inf / ty, .32, color=BL, edgecolor=F)
-        a.text(100 * max(inf, mx) / ty + 4, yy,
-               f"{inf:g} contre {ty:g}–{mx:g} {u}", va="center",
-               color="#e6e9ef", fontsize=8.6)
+        a.barh(yy + .17, 100.0, .32, color=VE, alpha=.60, edgecolor=F)
+        if om > ot:
+            a.barh(yy + .17, 100 * om / ot - 100, .32, left=100, color=VE,
+                   alpha=.25, edgecolor=F)
+        a.barh(yy - .19, 100 * it / ot, .32, color=BL, edgecolor=F)
+        if im > it:
+            a.barh(yy - .19, 100 * (im - it) / ot, .32, left=100 * it / ot,
+                   color=BL, alpha=.35, edgecolor=F)
+        a.text(100 * max(im, om) / ot + 4, yy,
+               f"{it:g}–{im:g}  contre  {ot:g}–{om:g} {u}" if im > it
+               else f"{it:g}  contre  {ot:g} {u}",
+               va="center", color="#e6e9ef", fontsize=8.2)
     a.axvline(100, color=V, ls=":", lw=1.0)
     a.set_yticks(y)
     a.set_yticklabels([p[0] for p in PIECES], fontsize=10)
-    a.set_xlim(0, 215)
+    a.set_xlim(0, 310)
     a.set_xlabel("rapport au typique onsemi  [%]", color=V, fontsize=9.5)
     a.grid(False, axis="y")
     a.set_title("SIMULÉE ≠ MONTÉE", color="#e6e9ef", fontsize=11.5,
@@ -136,9 +145,9 @@ def main() -> int:
     a.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=BL),
                       plt.Rectangle((0, 0), 1, 1, color=VE, alpha=.55),
                       plt.Rectangle((0, 0), 1, 1, color=VE, alpha=.22)],
-             labels=["IPD530N15N3 — extrait du modèle",
+             labels=["IPD530N15N3 — fiche Rev 2.6",
                      "FDD770N15A — fiche, typique",
-                     "FDD770N15A — jusqu'au maximum"],
+                     "jusqu'au maximum"],
              fontsize=7.6, facecolor=G, edgecolor="#2b3240", labelcolor=V,
              loc="lower right")
 
@@ -146,12 +155,13 @@ def main() -> int:
              "SIMULÉE ET CELLE QUI SERA MONTÉE", ha="center",
              color="#e6e9ef", fontsize=13.5, weight="bold")
     fig.text(.5, .918, "méthode d'extraction étalonnée sur la pièce dont j'ai "
-             "la fiche : $C_{oss}$ +4 %, $Q_g$ +2 %", ha="center", color=V,
-             fontsize=9.6)
-    fig.text(.5, .030, "RÉSERVE — le $Q_{oss}$ extrait vaut 7,6 nC contre "
-             "14 nC à la fiche, soit −46 % : le modèle sous-estime la "
-             "capacité à BASSE tension d'un facteur 1,8, et en DCM le nœud y "
-             "séjourne tout le temps mort.", ha="center", color=RO,
+             "la fiche : $C_{oss}$ +4 %, $Q_g$ +2 %  —  puis CONFIRMÉE par la "
+             "fiche Infineon : $C_{oss}$ −0,1 %, $Q_g$ +0,5 %, $Q_{oss}$ 0,0 %",
+             ha="center", color=V, fontsize=9.4)
+    fig.text(.5, .030, "CE QUI CHANGE POUR LE PROTOTYPE — l'Infineon stocke "
+             "2,1× la charge de recouvrement (229 contre 109 nC). La "
+             "simulation est donc le cas PESSIMISTE : la pièce montée "
+             "devrait faire un peu mieux.", ha="center", color=VE,
              fontsize=9.2)
     plt.savefig(ICI / "grille_pieces.png", dpi=104, facecolor=F)
     print("  grille_pieces.png")

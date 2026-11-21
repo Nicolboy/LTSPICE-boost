@@ -140,7 +140,8 @@ def main() -> int:
             #
             # Or la rampe est a COURANT CONSTANT : Qoss = I.t, point.
             # C'est la definition meme de la manip, et elle ne derive rien.
-            qoss = float(np.interp(37.5, v, tc)) * 1e-3 * 1e9
+            qoss = {m: float(np.interp(u, v, tc)) * 1e-3 * 1e9
+                    for m, u in (("37.5", 37.5), ("75", 75.0))}
             # Qg au PREMIER franchissement de 10 V. `np.interp` suppose
             # une abscisse croissante ; V(ng) ne l'est pas (palier Miller
             # puis sonnerie), et l'interpolation retombait sur 0,00 nC.
@@ -148,7 +149,8 @@ def main() -> int:
             q10 = q[k] * 1e9 if k > 0 else float("nan")
             res[mod] = dict(c75=c75, qoss=qoss, q10=q10, v=v, c=c, g=g, q=q)
             print(f"  {mod} : Coss(75 V) = {c75:.1f} pF   "
-                  f"Qoss(37,5 V) = {qoss:.1f} nC   Qg(10 V) = {q10:.2f} nC")
+                  f"Qoss = {qoss['37.5']:.1f} nC a 37,5 V et "
+                  f"{qoss['75']:.1f} nC a 75 V   Qg(10 V) = {q10:.2f} nC")
         except Exception as e:
             print(f"  {mod} : extraction ECHOUEE -- {type(e).__name__}: {e}")
     if "fdd770" in res:
@@ -157,7 +159,7 @@ def main() -> int:
         print(f"    {'grandeur':22s} {'fiche':>18s} {'extrait':>10s} {'ecart':>9s}")
         for lib, ex, (ty, mx, u) in (
                 ("Coss a 75 V", f["c75"], FICHE_FDD["Coss a 75 V"]),
-                ("Qoss a 37,5 V", f["qoss"], FICHE_FDD["Qoss a 37,5 V"]),
+                ("Qoss a 37,5 V", f["qoss"]["37.5"], FICHE_FDD["Qoss a 37,5 V"]),
                 ("Qg total a 10 V", f["q10"], FICHE_FDD["Qg total a 10 V"])):
             mxs = f"{mx:g}" if mx else "--"
             print(f"    {lib:22s} {ty:8g} / {mxs:>6s} {ex:9.1f} "

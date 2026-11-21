@@ -594,3 +594,56 @@ paie.** Les 10 Ω retenus ont de la marge des deux côtés.
 
 > J'avais attribué deux effets à la même cause sans jamais faire varier
 > cette cause. Le balayage était à une option près.
+
+## M — La fiche qui arrive après (2026-11-21)
+
+### M1 — Une réserve posée trop large
+
+Le $Q_{oss}$ extrait du modèle onsemi valait 7,6 nC contre 14 à sa fiche.
+J'en ai conclu que « le modèle sous-estime la capacité à basse tension
+d'un facteur 1,8, **sur les deux pièces** ». La seconde moitié ne reposait
+sur rien : je n'avais aucune mesure sur l'autre.
+
+La fiche Infineon arrivée ensuite tranche — le modèle y est **exact** :
+
+| | extrait du modèle | fiche Rev 2.6 | écart |
+|---|---|---|---|
+| $C_{oss}$ @ 75 V | 79,9 pF | 80 typ / 106 max | **−0,1 %** |
+| $Q_g$ @ 10 V | 8,74 nC | 8,7 typ / 12 max | **+0,5 %** |
+| $Q_{oss}$ @ 75 V | 22,0 nC | 22 typ / 29 max | **0,0 %** |
+
+> Une réserve est une affirmation comme une autre. L'étendre à un cas
+> non mesuré, c'est deviner — avec le ton de la prudence.
+
+### M2 — Comparer à la condition de la fiche
+
+J'avais relevé $Q_{oss}$ à 37,5 V pour les deux pièces. C'est la condition
+de la fiche **onsemi** ; Infineon spécifie la sienne à **75 V**. À 37,5 V
+l'extraction Infineon donne 18,1 nC, qui ne se compare à rien.
+
+### Ce qui en ressort, et qui tient
+
+**La méthode d'extraction est bonne.** Étalonnée sur la pièce connue
+(±4 %), elle a prédit les trois grandeurs de la pièce inconnue à mieux
+qu'un demi pour cent. Elle reste utilisable la prochaine fois qu'une
+fiche manque.
+
+**Et le modèle Infineon est excellent**, ce qui vaut d'être dit après
+l'avoir malmené : il ne converge qu'avec `cshunt`, mais ce qu'il rend est
+juste.
+
+### Pour le prototype
+
+| | IPD530N15N3 *simulé* | FDD770N15A *monté* |
+|---|---|---|
+| $R_{ds(on)}$ | 44 / **53** mΩ | 61 / **77** mΩ |
+| $C_{oss}$ @ 75 V | 80 / 106 pF | 64 / 85 pF |
+| $Q_g$ @ 10 V | 8,7 / 12 nC | 8,4 / 11 nC |
+| $t_{rr}$ | 80 ns | 56,4 ns |
+| **$Q_{rr}$** | **229 nC** | **109 nC** |
+| $T_j$ max | 175 °C | 150 °C |
+
+L'Infineon stocke **2,1× la charge de recouvrement**. En DCM la diode de
+corps conduit à chaque excursion négative du temps mort, donc **la
+simulation est le cas pessimiste** : la pièce montée devrait faire un peu
+mieux. C'est la bonne direction pour un écart qu'on ne maîtrise pas.
