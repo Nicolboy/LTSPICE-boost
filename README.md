@@ -21,7 +21,7 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 >
 > | | état |
 > |---|---|
-> | inductance · mode | `SER2211-473` 47 µH · DCM sous la frontière, CCM au-dessus |
+> | inductance · mode | voir la décision ci-dessous — `banc.toml` déclare encore l'ancien `SER2211-473` 47 µH / 400 kHz / CCM, **non mis à jour tant que la décision n'est pas actée** |
 > | diode | matrice de 44 cellules sur modèles constructeur — `V8PA22` Si et `C3D16065D1` SiC à égalité, CoolSiC G6 au double de pertes |
 > | vitesse de commande | **tranchée à $R_g = 10\ \Omega$, 73 V/ns** — les figures HF publiées sont à 385 V/ns et restent à reprendre |
 > | méthode | 60 fautes recensées dans [`04-emi/RETEX-erreurs.md`](04-emi/RETEX-erreurs.md), converties en refus exécutables |
@@ -54,7 +54,7 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > `SER2211-473` en stock travaille à **79 % de son $I_{sat}$** en régime
 > nominal.
 >
-> **Il n'y a pas une frontière, il y a une bande.** $P_	ext{lim}$ varie en
+> **Il n'y a pas une frontière, il y a une bande.** $P_\text{lim}$ varie en
 > $V_{in}^2(1-V_{in}/V_{out})$ : sur 12–25 V elle se déplace d'un **facteur
 > 3,5**. Annoncer « transition à 15 W » n'a de sens qu'à une seule tension
 > d'entrée.
