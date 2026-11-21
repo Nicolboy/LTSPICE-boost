@@ -353,3 +353,91 @@ accuser le circuit avant de lire le journal, optimiser avant de profiler.
 | sept obstacles du portage ngspice | `sim-spice/SKILL.md` |
 | trois fautes sur les pertes (valeur absolue, boucle ouverte, fenêtre) | `sim-spice/SKILL.md` |
 | quatre mémoires : architecture, parallélisme, modèles non interchangeables, coupes ≠ surface | mémoire de session |
+
+## J — La béquille (2026-11-21)
+
+Six fautes enchaînées sur un seul élément : un condensateur de 50 pF posé
+sur le nœud de commutation. Elles valent d'être lues ensemble, parce
+qu'aucune n'était visible seule.
+
+### J1 — Corriger un artefact par un élément non physique
+
+La diode donnait ±50 A à la fermeture. J'ai ajouté `Cosn` = 50 pF pour
+l'amortir. Le symptôme a disparu.
+
+**La cause ne l'avait pas.** Il manquait l'inductance de maille — un
+élément *physique*, 2 à 20 nH sur toute boucle drain-diode réelle. Sans
+elle, la décharge de la Cj à travers `Ron` n'est bornée que par le pas.
+
+> Un élément ajouté pour faire taire un symptôme doit se justifier par la
+> physique, jamais par le résultat qu'il produit.
+
+### J2 — La béquille ne supprime pas l'artefact, elle le déplace
+
+`Cosn` a ramené la pointe de diode de 50 à 0,87 A. En échange, elle en a
+créé une de **220 A dans elle-même**, invisible parce que personne ne
+traçait `I(Cosn)`.
+
+### J3 — Une constante de temps non comparée au pas
+
+$R_{on} C_{osn}$ = 0,053 × 50 pF = **2,65 ps**, contre un pas de 500 ps.
+Deux cents fois trop grossier. L'énergie $	frac12 CV^2 f$ — une perte
+**réelle** — sortait du bilan sans apparaître nulle part : résidu de
+18,6 mW, soit 21,3 % des pertes, et un banc refusé sans cause lisible.
+
+> Avant de croire une intégrale, comparer chaque constante de temps du
+> circuit au pas maximal. Moins d'un pas : ce n'est pas intégré.
+
+**Porte 6 du gendarme** (`constantes_resolues`) : REFUS sous un pas,
+ALERTE sous dix.
+
+### J4 — Un critère global sur une question de topologie
+
+Première version de cette porte : « la plus petite résistance du circuit ».
+Elle refusait le $C_p$ de 8,2 pF du modèle Coilcraft — pourtant en série
+avec $R_c$ = 140 Ω et parfaitement résolu. Même famille que G3.
+
+Le critère juste est étroit : **une capacité dont les deux nœuds sont les
+deux nœuds d'un interrupteur**. Le chemin de décharge est alors connu sans
+ambiguïté. Aucun faux positif sur les trois configurations réelles.
+
+### J5 — Retirer l'élément déplace l'artefact une troisième fois
+
+`Cosn` = 0 : le bilan ferme sur les trois étapes. Mais à l'étape 0, `nsw`
+se retrouve entre `L1` et `Lb` **sans aucune capacité**. À l'ouverture,
+1,19 A n'a nulle part où aller — $V_{nsw}$ monte à **742 V**.
+
+Et le bilan **ferme quand même** : l'échange L-L conserve l'énergie. Aucune
+porte énergétique ne pouvait le voir.
+
+> Un bilan fermé ne dit pas que le montage est physique. Il dit que
+> l'énergie est conservée — ce qu'un artefact sans perte fait très bien.
+
+**Porte 7** (`noeud_flottant`) : ALERTE sur tout nœud portant deux
+inductances et aucune capacité.
+
+### J6 — Une échelle d'axe qui cache le défaut
+
+La première figure bornait l'axe des tensions à 228 V, valeur choisie
+pour que les trois étapes soient comparables. Les 742 V étaient hors cadre.
+**J'ai regardé la courbe et je ne l'ai pas vu.**
+
+> Avant de borner un axe, tracer une fois sans borne.
+
+### Ce qui a été retenu
+
+| | étape 0 | étape 1 | étape 2 |
+|---|---|---|---|
+| rendement | 99,05 % | 97,39 % | 96,51 % |
+| pertes | 82 mW | 206 mW | 285 mW |
+| pointe à la fermeture | −0,79 A | −0,62 A | **−0,46 A** (était −7,19 A) |
+| $V_{nsw}$ crête | 742 V ✗ | 127 V | 129 V |
+| bilan | fermé | fermé | fermé |
+
+$C_{osn}$ retiré des étapes 0 à 2. Le $C_{oss}$ est réel mais indissociable
+du $g_m$ fini qui borne sa décharge : les deux arrivent ensemble à l'étape 3
+avec l'IPD530N15N3, où la perte $	frac12 CV^2 f$ sera portée
+**analytiquement** puisque aucun pas praticable ne l'intègre.
+
+La surtension de drain de l'étape 0 n'est **pas** un résultat exploitable.
+Les étapes 1 et 2 la donnent : 127 et 129 V, soit 1,6 fois $V_{out}$.

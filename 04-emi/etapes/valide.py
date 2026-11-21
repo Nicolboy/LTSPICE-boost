@@ -27,7 +27,8 @@ from gendarme import bilan_ferme, fenetre_entiere, recoupe, REFUS  # noqa: E402
 from simcommun.lecture import lire                       # noqa: E402
 
 EXE = r"C:\Program Files\ADI\LTspice\LTspice.exe"
-RP, RS, RC, L_IND, COSN, CP = 7315.89, 0.0107, 140.0, 47e-6, 50e-12, 8.183e-12
+RP, RS, RC, L_IND, COSN, CP = 7315.89, 0.0107, 140.0, 47e-6, 1e-18, 8.183e-12
+LB = 10e-9                 # maille de routage, element PHYSIQUE
 
 
 def lance(nom, **kw):
@@ -52,6 +53,7 @@ def mesure(raw, ser):
     vs, vo, ib, idd = g("V(nsw)"), g("V(nout)"), g("I(Vbat)"), g("I(Vd)")
     itot, icos, il = g("I(Vsl)"), g("I(Cosn)"), g("I(L1)")
     isw = itot - idd - icos
+    ilb = g("I(Lb)")
     pin, pout = -moy(ib) * 19.0, moy(idd) * 80.0
 
     if ser:
@@ -71,9 +73,11 @@ def mesure(raw, ser):
                       "L.DCR")
         dEl = 0.0
     pert["S1"] = moy(vs * isw)
-    pert["D1"] = moy((vs - vo) * idd)
+    vda = g("V(nda)")
+    pert["D1"] = moy((vda - vo) * idd)
     stock = (0.5 * L_IND * (il[-1] ** 2 - il[0] ** 2)
-             + 0.5 * COSN * (vs[-1] ** 2 - vs[0] ** 2) + dEl) / T
+             + 0.5 * COSN * (vs[-1] ** 2 - vs[0] ** 2) + dEl
+             + 0.5 * LB * (ilb[-1] ** 2 - ilb[0] ** 2)) / T
 
     griefs = [(x.rang, x.ref, x.texte) for x in
               (fenetre_entiere(tt, 200e3)
@@ -112,14 +116,27 @@ def rapport(nom, bil, griefs):
 
 
 if __name__ == "__main__":
-    cfg = dict(charge=False, n_etab=40, n_mes=8, dtmax=0.5e-9)
+    import os
+    cfg = dict(charge=False, n_etab=40, n_mes=8, dtmax=0.5e-9,
+               c_noeud=float(os.environ.get("CNOEUD", "0")))
     res = {}
-    for nom, kw in (("ETAPE 1  SER2211 + diode ideale",
-                     dict(ser=True, v8pa22=False)),
-                    ("ETAPE 2  SER2211 + V8PA22 constructeur",
-                     dict(ser=True, v8pa22=True))):
-        tag = "s1" if not kw["v8pa22"] else "s2"
+    for tag, nom, kw in (
+            ("s0", "ETAPE 0  tout ideal", dict(ser=False, v8pa22=False)),
+            ("s1", "ETAPE 1  + SER2211 constructeur", dict(ser=True, v8pa22=False)),
+            ("s2", "ETAPE 2  + V8PA22 constructeur", dict(ser=True, v8pa22=True))):
         raw = lance(tag, **cfg, **kw)
-        b, g = mesure(raw, ser=True)
+        b, g = mesure(raw, ser=kw["ser"])
         res[nom] = (b, g)
         rapport(nom, b, g)
+    # L'ARTEFACT A-T-IL DISPARU ? C'est la question qui a motive la maille.
+    import numpy as _np
+    from simcommun.lecture import lire as _lire
+    print(chr(10) + "  === LA POINTE A LA FERMETURE ===")
+    print(f"    {'etape':28s} {'avant 10 nH':>12s} {'avec 10 nH':>12s}")
+    for tag, nom, av in (("s0", "tout ideal", None),
+                         ("s1", "SER2211 + diode ideale", -0.30),
+                         ("s2", "SER2211 + V8PA22", -7.19)):
+        r = _lire(str(ICI / f"{tag}.raw"))
+        i = _np.asarray(r.trace("I(Vd)")).real
+        a = f"{av:11.2f} A" if av is not None else f"{'—':>12s}"
+        print(f"    {nom:28s} {a} {i.min():11.2f} A")

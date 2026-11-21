@@ -55,8 +55,8 @@ SER2211 = ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0)
 
 
 def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
-           c_noeud=50e-12, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
-           v8pa22=False):
+           c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
+           v8pa22=False, l_maille=10e-9):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -87,16 +87,30 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             f"Rdcr nl   nsw  {DCR:.6e}"))
     # ETAPE 2 : la diode IDEALE devient le modele CONSTRUCTEUR Vishay.
     # `.MODEL D`, donc prefixe D et JAMAIS X -- le gendarme refuse l'inverse.
+    # INDUCTANCE DE MAILLE -- element PHYSIQUE, pas un artifice numerique.
+    #
+    # Sans elle, la diode est branchee a meme le drain : quand le MOSFET se
+    # ferme sur un noeud laisse a -15 V par l'oscillation de temps mort, la
+    # charge de Cosn et de la Cj est court-circuitee a travers Ron = 53 mOhm.
+    # dV/Ron = 300 A, et seul le PAS D'INTEGRATION borne le courant -- la
+    # valeur obtenue depend donc du pas, ce qui est la definition d'un
+    # artefact. Mesure : 7,19 A de pointe pour 0,27 nC seulement.
+    #
+    # La maille reelle d'une boucle drain-diode-condensateur fait 2 a 20 nH.
+    # Avec elle, la decharge devient une oscillation amortie bornee par
+    # di/dt = V/L, et l'energie n'est plus comptee a tort dans S1.
+    tete = (f"* maille de routage, {l_maille*1e9:.0f} nH -- borne le di/dt "
+            f"a la fermeture", f"Lb   nsw  nda  {l_maille:.4e}")
     if v8pa22:
-        bloc_d = chr(10).join((
+        bloc_d = chr(10).join(tete + (
             "* diode CONSTRUCTEUR Vishay V8PA22 -- Schottky TMBS 200 V / 8 A",
-            "D1   nsw  nd   DV8PA22",
+            "D1   nda  nd   DV8PA22",
             (LIB / "Vishay" / "V8PA22.lib").read_text(encoding="utf-8",
                                                       errors="replace")))
     else:
-        bloc_d = chr(10).join((
+        bloc_d = chr(10).join(tete + (
             "* diode IDEALE",
-            "D1   nsw  nd   DID",
+            "D1   nda  nd   DID",
             ".model DID D(IS=1e-9 N=1.0 RS=0.02 CJO=100p BV=200)"))
     # RAPPORT CYCLIQUE DU BON MODE.
     #
@@ -148,11 +162,21 @@ S1   nsw  0    ng 0 MSW
 .model MSW SW(Ron={RDS:.6f} Roff=1meg Vt=2.5 Vh=0)
 Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} {{duty*tsw}} {{tsw}})
 
-* petit condensateur sur le noeud de commutation. Il represente le Coss
-* que le vrai transistor apportera a l'etape 3 ; ici il empeche surtout
-* la decharge instantanee de la Cj de la diode dans un interrupteur
-* parfait, qui donnait +-50 A d'artefact numerique.
-Cosn nsw  0    {c_noeud:.3e}
+* PAS de condensateur sur le noeud de commutation aux etapes 0 a 2.
+*
+* Il y en avait un (50 pF), pose pour brider les +-50 A d'artefact que la
+* Cj de la diode donnait dans un interrupteur parfait. La MAILLE regle ce
+* probleme a la source ; la capacite, elle, en creait un autre, plus gros
+* et mieux cache : sur un interrupteur IDEAL le canal est instantane, donc
+* la decharge vaut V/Ron = 28,3/0,053 = 534 A, bornee par le seul PAS
+* D'INTEGRATION. Releve : 220 A de pointe a l'etape 0, et un bilan
+* energetique ouvert de 21,3 % -- l'energie partait dans un pic trop
+* bref pour que moy(v.i) le voie.
+*
+* Le Coss est REEL, mais il est indissociable du gm fini qui borne sa
+* decharge. Les deux arrivent ensemble a l'etape 3, avec l'IPD530N15N3.
+* Les mettre separement, c'est modeliser la moitie qui fait mal.
+Cosn nsw  0    {max(c_noeud, 1e-18):.3e}
 
 {bloc_d}
 Vd   nd   nout DC 0
@@ -160,8 +184,8 @@ Vd   nd   nout DC 0
 .options plotwinsize=0
 .tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
 
-.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng)
-.save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn)
+.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda)
+.save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn) I(Lb)
 .meas TRAN iin  AVG -I(Vbat)     FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN il   AVG I(L1)        FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN ilmx MAX I(L1)        FROM {t0:.6e} TO {t1:.6e}
