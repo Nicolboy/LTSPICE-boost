@@ -57,7 +57,7 @@ SER2211 = ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0)
 def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
            v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
-           vin=None, rl=None):
+           vin=None, rl=None, pwm=None):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -192,8 +192,14 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             f"Ls 2,7n//27R)",
             f"X1   nsw  ngg  0    FDD770N15A",
             f"Rgx  ng   ngg  {rg:.4g}",
-            f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
-            f"{{duty*tsw}} {{tsw}})",
+            (f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
+             f"{{duty*tsw}} {{tsw}})" if not pwm else chr(10).join((
+                 "* MODULATEUR PWM : dent de scie contre tension de commande",
+                 "* C'est ici que la boucle viendra se brancher (etape R2).",
+                 f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
+                 f"0 {{tsw}})",
+                 f"{'Bctrl nctrl 0  ' if str(pwm).lstrip().upper().startswith('V') else 'Vctrl nctrl 0  '}{pwm}",
+                 f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))),
             (LIB / "onsemi" / "FDD770N15A.lib").read_text(encoding="utf-8",
                                                           errors="replace")))
     elif nom_mos:
@@ -202,8 +208,14 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             f"* variante _L1 : boitier inclus (Ls 2n, Ld 1n, Lg 3n), NON amorti",
             f"X1   nsw  ngg  0    IPD530N15N3_L1",
             f"Rgx  ng   ngg  {rg:.4g}",
-            f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
-            f"{{duty*tsw}} {{tsw}})",
+            (f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
+             f"{{duty*tsw}} {{tsw}})" if not pwm else chr(10).join((
+                 "* MODULATEUR PWM : dent de scie contre tension de commande",
+                 "* C'est ici que la boucle viendra se brancher (etape R2).",
+                 f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
+                 f"0 {{tsw}})",
+                 f"{'Bctrl nctrl 0  ' if str(pwm).lstrip().upper().startswith('V') else 'Vctrl nctrl 0  '}{pwm}",
+                 f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))),
             f'.inc "{(LIB / "Infineon" / "OptiMOS3_150V_LTSpice.lib").as_posix()}"'))
     else:
         bloc_s = chr(10).join((
@@ -216,6 +228,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             f"Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} "
             f"{{duty*tsw}} {{tsw}})"))
     sv_rg = " I(Rgx)" if nom_mos else ""
+    sv_pwm = " V(nctrl) V(nramp)" if pwm else ""
     tsw = 1.0 / FSW
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
@@ -265,7 +278,7 @@ Vd   nd   nout DC 0
 .options plotwinsize=0
 .tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
 
-.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda) V(ngg)
+.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda) V(ngg){sv_pwm}
 .save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn) I(Lb){sv_rg}
 .meas TRAN iin  AVG -I(Vbat)     FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN il   AVG I(L1)        FROM {t0:.6e} TO {t1:.6e}
