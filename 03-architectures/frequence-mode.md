@@ -664,6 +664,74 @@ Modèle PSpice disponible
 
 ---
 
+## 12. Surtension drain mesurée — le 150 V passe
+
+Campagne du 2026-11-21, double-pulse à **2,6 A coupés exactement**, quatre
+modèles constructeur, $L_{pcb}$ balayée de 1 à 40 nH, $R_g$ = 10 Ω.
+21 cas sur 24.
+
+**$V_{ds}$ crête (V)**, budget = $V_{DS}	imes0{,}8 - 80$ :
+
+| pièce | boîtier | calibre | 1 nH | 5 nH | 10 nH | 20 nH | 40 nH |
+|---|---|---|---|---|---|---|---|
+| **IPD530N15N3** | DPAK | **150 V** | 81 | 83 | 85 | 86 | **92** |
+| IPD320N20N3 | DPAK | 200 V | 81 | — | 86 | — | — |
+| BSC900N20NS3 | SuperSO8 | 200 V | 82 | 82 | 86 | 85 | **91** |
+| FDD770N15A | DPAK | 150 V | 82 | 84 | **102** | **124** | **146** |
+
+**Les trois pièces Infineon restent sous 92 V à 40 nH de routage**, pour un
+plafond de 120 V sur un 150 V. **Le 150 V passe, avec de la marge, pour
+tout routage réaliste** — la question de la tenue en tension du transistor
+est donc close, et dans le sens favorable.
+
+### 12.1 Pourquoi la loi de la diode ne s'y applique pas
+
+Le chapitre 4 vérifie $\Delta V = L_\sigma\,di/dt$ **à 0,4 % près** sur la
+diode. Sur le drain, le même contrôle donne **+9 % à +160 %** : la loi ne
+se referme pas, et c'est physique.
+
+| | diode | drain |
+|---|---|---|
+| événement | recouvrement, coupure **abrupte** et imposée | coupure **progressive** par le canal |
+| ce qui la limite | rien, sinon $L_\sigma$ | le $C_{oss}$ absorbe, et $L_s$ **contre-réagit sur la grille** |
+
+L'inductance de source est dans la boucle de grille : plus le courant
+chute vite, plus elle s'oppose à la commande. **La coupure est
+auto-limitée**, ce qu'une loi linéaire ne décrit pas.
+
+> **Conséquence de méthode** : on ne transporte pas une loi d'un
+> composant à l'autre, même quand la forme algébrique semble la même.
+> C'était l'hypothèse de départ de cette campagne, et elle est fausse.
+
+### 12.2 Une réserve que je ne masque pas
+
+À 40 nH, le `FDD770N15A` monte à **146 V** là où les trois Infineon sont à
+91-92 V. Deux modélisations de pièces comparables divergent de **54 V**.
+
+Son $di/dt$ mesuré atteint **2,39 A/ns** contre 0,4 à 0,7 pour les
+Infineon. Soit la pièce commute réellement bien plus vite, soit les deux
+familles de modèles ne décrivent pas la coupure de la même façon — les
+modèles Infineon portent un réseau thermique et parasite détaillé, celui
+d'onsemi est plus simple.
+
+**Je ne tranche pas**, et je ne retiens donc pas le `FDD770N15A` : à
+calibre et boîtier équivalents, l'`IPD530N15N3` est modélisé dans la même
+famille que les deux 200 V, ce qui rend la comparaison interne cohérente.
+C'est la faute C4 — ne pas généraliser d'une famille de modèles à l'autre.
+
+### 12.3 Spécification de routage
+
+Puisque le 150 V passe à 40 nH, **l'inductance de maille n'est plus une
+contrainte de tenue en tension**. Elle le reste pour la diode (80 V de
+budget, loi vérifiée du chapitre 4 → $L_\sigma < 25$ nH) et pour le
+contenu HF du spectre conduit.
+
+**Retenu : `IPD530N15N3`**, Infineon OptiMOS 3, 150 V, 53 mΩ, DPAK — le
+boîtier demandé pour les prototypes, un modèle constructeur disponible, et
+92 V crête pour 120 V de plafond.
+
+---
+
 ## Reproduire
 
 Les chiffres de frontière, d'ondulation et de courant crête de ce document

@@ -1,57 +1,77 @@
-# FICHE DE BANC — LTSPICE-boost, étage 1 : 20 V -> 80 V, 400 kHz
+# FICHE DE BANC — LTSPICE-boost, étage 1
 #
-# Les prémisses du montage RÉEL, déclarées une fois, confrontées à chaque
-# netlist par .claude/skills/sim-spice/scripts/gendarme.py.
+# Prémisses du montage RÉEL, confrontées à chaque netlist par
+# .claude/skills/sim-spice/scripts/gendarme.py.
 #
-# Établie le 2026-11-21 d'après les corrections du concepteur en session.
-# NE PAS la déduire d'un fichier de banc antérieur : c'est exactement la
-# faute A1-A5 (six divergences, six reprises du concepteur).
+# ACTÉE LE 2026-11-21 au terme de la remise à plat des cinq choix
+# (03-architectures/frequence-mode.md). NE PAS la déduire d'un fichier de
+# banc antérieur — c'est la faute A1-A5, six divergences, six reprises du
+# concepteur.
 
 [montage]
 inductance    = "SER2211-473 47 µH"          # Coilcraft, modèle Model1D publié
-mode          = "CCM"                        # transition DCM/CCM entre 10 et 20 W
-diode         = "Wolfspeed C3D16065D1 650 V" # .SUBCKT : NC A K Case Tj Tc (6 nœuds)
-interrupteur  = "Infineon BSC360N15NS3"
-reseau_entree = "220 µF ∥ (1000 µF + 500 mΩ placée) ∥ 1 µF MLCC"
+mode          = "CCM"                        # au-dessus de la frontière ; DCM en dessous
+diode         = "Vishay V8PA22 200 V 8 A"    # Schottky TMBS, SMPA DO-221BC
+interrupteur  = "Infineon IPD530N15N3"       # OptiMOS 3, 150 V, 53 mΩ, DPAK
+reseau_entree = "220 µF ∥ (1000 µF + 500 mΩ placée) ∥ 1 µF MLCC 63 V"
+reseau_sortie = "300 µF aluminium, ESR 100-200 mΩ ∥ MLCC 200 V"
 
 # Les 500 mΩ sont une résistance PLACÉE, branche d'amortissement RC — pas
 # une ESR. Les lire comme un parasite efface une décision de conception (A6).
+#
+# L'ESR du condensateur de SORTIE est également un ÉLÉMENT DE CONCEPTION :
+# non amortie, la résonance du double pôle atteint Q = 118 (+41 dB) ; à
+# 100 mΩ elle tombe à Q = 2,6, et le zéro d'ESR à 5,3 kHz apporte +90° de
+# phase juste sous le crossover. Un polymère faible ESR annulerait tout.
 
 [conditions]
-vin_v  = 20.0
-vout_v = 80.0
-fsw_hz = 400e3
+vin_v  = 20.0                  # plage réelle 12 à 25 V
+vout_v = 80.0                  # PLAFONNÉ à 80 V — c'est ce qui rend le 150 V tenable
+fsw_hz = 200e3
 rg_ohm = 10.0
 dvdt_v_ns = 73.0
-r_boucle_ohm = 0.016           # DCR 10,7 mΩ + Rds 5 mΩ : fixe τ = L/R ≈ 3 ms
+r_boucle_ohm = 0.021           # DCR 10,7 mΩ + Rds 53 mΩ x D ; fixe τ = L/R
 justification_vitesse = """\
 Rg = 10 Ω retenu à l'arbitrage CEM du chapitre 4. Les 1 Ω / 150 ps du banc \
 initial étaient un défaut hérité d'un banc GaN, jamais questionné : ils \
 donnaient 385 V/ns et ont invalidé tout le contenu HF du chapitre (A5)."""
 
 [mesurande]
-grandeur = "pertes diode"
-p_nom_w  = 40.0
-ordre_de_grandeur_w = 0.4      # 337 à 809 mW selon la diode, à 40 W
+grandeur = "surtension drain et pertes"
+p_nom_w  = 50.0                # plage 5 à 50 W, PRIVILÉGIÉE 5-10 W
+ordre_de_grandeur_w = 0.5
 regime   = "etabli"
 asservi  = false
-# À 47 µH la boucle fait ~16 mΩ, donc τ ≈ 3 ms : une fenêtre de 9 ms est
-# hors de portée. La campagne du 2026-11-20 a tranché par la correction
-# ½L(I₁²−I₀²)/T, mesurée sur la fenêtre. On la DÉCLARE, elle n'est pas
-# implicite — sans elle, 2,59 W de fausse perte (D5).
 correction_energie_stockee = true
+# À 47 µH la boucle fait ~21 mΩ, donc τ ≈ 2,2 ms : une fenêtre de 7 ms est
+# hors de portée. La correction ½L(I₁²−I₀²)/T est DÉCLARÉE, pas implicite —
+# sans elle, 2,59 W de fausse perte (D5).
 
 [provenance]
 # "datasheet" | "utilisateur" | "POSEE"
 l_47uh          = "datasheet"     # Coilcraft SER2211-473, modèle publié
-diode_c3d       = "datasheet"     # modèle Wolfspeed, passe tel quel sans uic
-mosfet          = "datasheet"     # PSpice Infineon OptiMOS 150 V
+diode_v8pa22    = "datasheet"     # Vishay, modèle validé au chapitre 4
+mosfet          = "datasheet"     # Infineon OptiMOS3_150V_LTSpice.lib
+frequence       = "datasheet"     # balayage 343 cellules, chapitre 2 §11
 mode_et_reseau  = "utilisateur"   # prototype de juillet-août, corrigé en session
-esr_220uf       = "POSEE"         # référence Panasonic exacte non obtenue
+esr_220uf       = "POSEE"         # référence exacte non obtenue
 esr_1000uf      = "POSEE"         # idem
+esr_cout        = "POSEE"         # 100-200 mΩ visés, porte TOUT l'amortissement
+mlcc_derate     = "POSEE"         # valeur sous polarisation non calculée
 l_maille        = "POSEE"         # balayée 1-16 nH, aucune valeur mesurée
-classe_cispr25  = "POSEE"         # classe 3 = hypothèse de travail, non tranchée
+classe_cispr25  = "POSEE"         # classe 3 = hypothèse de travail
 
-# Les quatre POSÉES ci-dessus doivent apparaître dans toute conclusion qui
-# en dépend. L'ESR du 220 µF à elle seule fait basculer la marge de
-# stabilité de −3,4 à +28,9 dB.
+# SIX valeurs POSÉES. Toute conclusion qui en dépend doit le porter.
+# L'ESR du 220 µF à elle seule fait basculer la marge de stabilité de
+# −3,4 à +28,9 dB : c'est la plus grosse inconnue du projet.
+
+[firmware]
+# DÉPENDANCE, pas une option. La frontière DCM/CCM tombe à 6,3 W sous 12 V,
+# donc DANS la fourchette d'emploi privilégiée 5-10 W. Le plant y est
+# discontinu : second ordre avec zéro à droite en CCM, premier ordre en DCM.
+# Un compensateur FIXE y chasse, et le cycle limite tombe sous 20 kHz,
+# en plein audible.
+regulation = "C2000 CLA, gain scheduling sur le mode"
+crossover_hz = 6500            # f_z minimum 19,5 kHz au coin 12 V / 25 W
+# Si le firmware part sur un compensateur fixe, viser 2-3 kHz et accepter
+# la réponse transitoire correspondante.
