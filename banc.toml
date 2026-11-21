@@ -13,8 +13,8 @@ inductance    = "SER2211-473 47 µH"          # Coilcraft, modèle Model1D publi
 mode          = "CCM"                        # au-dessus de la frontière ; DCM en dessous
 diode         = "Vishay V8PA22 200 V 8 A"    # Schottky TMBS, SMPA DO-221BC
 interrupteur  = "Infineon IPD530N15N3"       # OptiMOS 3, 150 V, 53 mΩ, DPAK
-reseau_entree = "220 µF ∥ (1000 µF + 500 mΩ placée) ∥ 1 µF MLCC 63 V"
-reseau_sortie = "300 µF aluminium, ESR 100-200 mΩ ∥ MLCC 200 V"
+reseau_entree = "hybride 270 µF/35 V ∥ (1000 µF + 500 mΩ placée) ∥ (1 µF X7R 200 V 1812 + 0,2 Ω)"
+reseau_sortie = "Nichicon EGXF201ELL131MM20S 130 µF/200 V ∥ (1 µF X7R 200 V 1812 + 0,2 Ω)"
 
 # Les 500 mΩ sont une résistance PLACÉE, branche d'amortissement RC — pas
 # une ESR. Les lire comme un parasite efface une décision de conception (A6).
@@ -56,8 +56,10 @@ frequence       = "datasheet"     # balayage 343 cellules, chapitre 2 §11
 mode_et_reseau  = "utilisateur"   # prototype de juillet-août, corrigé en session
 esr_220uf       = "POSEE"         # référence exacte non obtenue
 esr_1000uf      = "POSEE"         # idem
-esr_cout        = "POSEE"         # 100-200 mΩ visés, porte TOUT l'amortissement
-mlcc_derate     = "POSEE"         # valeur sous polarisation non calculée
+esr_cout        = "datasheet"     # 159 mΩ a 200 kHz, modele Nichicon GXF a 7 elements
+amortissement_mlcc = "calcule"    # 0,2 Ω serie : sans elle, anti-resonance a 2 MHz
+mlcc_derate     = "ESTIMEE"       # -8 % a 20 V et -35 % a 80 V sur un 200 V ;
+                                  # coefficients TYPIQUES, courbe constructeur non lue
 l_maille        = "POSEE"         # balayée 1-16 nH, aucune valeur mesurée
 classe_cispr25  = "POSEE"         # classe 3 = hypothèse de travail
 
