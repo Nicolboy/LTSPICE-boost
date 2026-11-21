@@ -441,3 +441,89 @@ avec l'IPD530N15N3, où la perte $	frac12 CV^2 f$ sera portée
 
 La surtension de drain de l'étape 0 n'est **pas** un résultat exploitable.
 Les étapes 1 et 2 la donnent : 127 et 129 V, soit 1,6 fois $V_{out}$.
+
+## K — Le transistor (2026-11-21)
+
+### K1 — Montrer, et pas seulement tabuler
+
+L'étape 3 a été livrée en tableaux. Une prédiction confirmée, un facteur 5
+sur les pertes, un modèle disqualifié — **et aucune courbe**. Le concepteur
+avait déjà eu à réclamer les figures une fois dans la même session.
+
+> « Si tu as un doute, TU DOIS ME MONTRER, JE DIS BIEN MONTRER DES COURBES
+> CORRESPONDANT AUX RÉSULTATS OBTENUS. »
+
+Ce n'est pas une préférence de présentation. Un tableau donne la moyenne ;
+la courbe dit *où* dans le cycle. Les 86,89 mW du transistor sont presque
+entièrement dans deux pics de commutation — invisible dans un chiffre.
+
+### K2 — Un axe borné cache ce qu'il faut voir, deuxième fois
+
+Première figure de l'étape 3 : axe à −95 V, alors que l'étape 2 descend
+à **−113,2 V**. L'axe coupait la mesure même qu'on voulait montrer.
+
+Même faute que J6, à vingt commits d'intervalle. Elle ne se corrige pas
+par la vigilance.
+
+### K3 — Le modèle qui converge peut être le mauvais
+
+| | convergence | $P$ aux bornes |
+|---|---|---|
+| Infineon `IPD530N15N3_L1` | **seulement à $R_g$ = 10 Ω** | **+89,36 mW** ✓ |
+| onsemi `FDD770N15A` | toutes de 2,2 à 47 Ω | **−76,80 mW** ✗ |
+
+J'ai failli garder l'onsemi **parce qu'il convergeait**. Son module de
+recouvrement inverse (`tau=70 igain=700`, sources `H`) fait du transistor
+un générateur. Neutraliser le module rend +22,73 mW — physique, mais ce
+n'est plus la pièce.
+
+> La robustesse numérique et la justesse physique sont indépendantes, et
+> la première est la plus visible.
+
+### K4 — Le bilan global ferme toujours
+
+J'ai annoncé « le modèle crée 76 mW, soit 49 % du disponible » en excluant
+le composant de la somme puis en comparant. **Le chiffre était juste, le
+raisonnement faux** : le bilan global ferme par construction, c'est
+Kirchhoff et non de la physique.
+
+Le test valide est la puissance **totale aux bornes du composant**, sommée
+sur toutes ses broches. Un passif a $P \ge 0$.
+
+### K5 — Un instrument qui change le mesurande
+
+J'ai ajouté une sonde de 0 V en série avec le drain pour lever une
+ambiguïté de signe. Elle a rendu **exactement** le même chiffre que le KCL
+au nœud (−76,51 contre −76,51 mW) — et cassé la convergence de
+l'IPD530N15N3, qui passait sans elle. Retirée.
+
+### K6 — Comparer à puissance égale
+
+Le transistor réel a des retards que l'interrupteur idéal n'avait pas :
+à rapport cyclique identique, la puissance tombe de 8,21 à 6,95 W.
+Annoncer « 96,85 % contre 96,51 % » là-dessus n'aurait rien voulu dire.
+Recalage à 0,588 avant toute comparaison.
+
+### Ce qui en sort
+
+| à duty 0,588 | étape 2 | étape 3 |
+|---|---|---|
+| $L.R_p$ | 194,29 mW | 139,30 mW |
+| **MOSFET** | 16,46 mW | **86,89 mW** |
+| diode | 66,46 mW | 65,05 mW |
+| $V_{nsw}$ min | −113,2 V | **−3,1 V** |
+| $V_{nsw}$ max | 127,9 V | **81,9 V** |
+
+**Le calibre 150 V est confirmé avec 45 % de marge.** Les 127-129 V des
+étapes 1-2 étaient pessimistes : l'interrupteur idéal n'avait pas de diode
+de corps pour écrêter l'excursion négative, qui alimentait la positive.
+
+### Deux réserves ouvertes
+
+Le **balayage de résistance de grille est impossible** avec ce modèle : il
+ne converge qu'à 10 Ω. C'est une limite réelle de l'étude.
+
+La **grille sonne à 226 MHz**, de 3,78 à 10,63 V. Elle reste dans le
+calibre, mais avec $R_g$ = 12,1 Ω, $L_g$ = 3 nH et $C_{iss}$ ≈ 1 nF
+l'amortissement calculé donne $Q pprox 0{,}2$ — donc **aucune sonnerie**.
+L'écart est à comprendre avant de s'appuyer sur ce front.
