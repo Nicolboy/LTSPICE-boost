@@ -739,4 +739,46 @@ des paliers numériques où $dV/dt$ frôle zéro, et le quotient explosait à
 > $C_{oss} = dQ/dV$ se lit sur des **intervalles** de tension, jamais par
 > un quotient par une quantité qui peut s'annuler. $Q_{oss}$ et $E_{oss}$,
 > eux, s'obtiennent sans aucune dérivée : la rampe est à courant
+
+### O2 — Et le quotient doit porter sur les mêmes échantillons
+
+Deuxième version, par **binning** en tension : `diff(q[idx]) /
+diff(bords)`. Elle a supprimé les pics, et laissé une dentelure de 7 à
+14 % que j'ai d'abord **lissée** au lieu de l'expliquer.
+
+Le concepteur a demandé ce qu'étaient ces pics. Ils venaient de moi :
+`searchsorted` cale le **numérateur** sur des échantillons — $\Delta Q$
+est donc quantifié par multiples de $I\,\Delta t$ — tandis que le
+**dénominateur** reste la largeur nominale, continue. L'écart entre les
+deux vaut un échantillon, soit 1/7 à 1/14 de l'intervalle selon la
+tension.
+
+| $V_{ds}$ | dV par pas | échantillons par intervalle |
+|---|---|---|
+| 3 V | 11,6 mV | 7,1 |
+| 30 V | 60,1 mV | 13,8 |
+| 140 V | 285,2 mV | 13,6 |
+
+Soit 7 à 14 % — exactement l'amplitude de la dentelure.
+
+La correction tient en une ligne : diviser par le $dV$ **des mêmes
+échantillons**, `diff(q[idx]) / diff(v[idx])`. Le bruit disparaît, et
+la justesse s'améliore au passage — $C_{oss}$(75 V) passe de 78,7 à
+**80,0 pF** contre 80 à la fiche.
+
+> Un bruit qu'on lisse est un bruit qu'on n'a pas compris. Ici le
+> lissage masquait une erreur de 10 % sur la grandeur elle-même.
+
+Le `.raw` contient par ailleurs des instants **dupliqués** ($\Delta t$ =
+0 ps relevé) : tout quotient y divise par zéro. Ils sont désormais
+retirés avant calcul.
+
+### O3 — Ce qui, en revanche, est réel
+
+Le décrochement de $C_{oss}$ vers 30-35 V sur l'IPD530N15N3 **n'est pas
+du bruit** : il est lisse, monotone, étalé sur plusieurs volts et porté
+par des dizaines d'échantillons. C'est le genou de déplétion
+caractéristique d'une structure à tranchées — la FDD770N15A, de
+technologie différente, n'en a pas.
+
 > constant, donc $Q = I\,t$.

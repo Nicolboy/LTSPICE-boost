@@ -98,6 +98,10 @@ def courbe(nom: str):
     v = np.asarray(r.trace("V(nd)")).real
     m = (v >= 0.0) & (v < 149.0)
     t, v = t[m] - t[m][0], v[m]
+    # le .raw contient des instants DUPLIQUES (dt = 0 ps releve) :
+    # ils donnent des divisions par zero dans tout quotient.
+    u = np.concatenate(([True], np.diff(t) > 0))
+    t, v = t[u], v[u]
     # Qoss = I.t, exact et sans aucune derivee.
     q = 1e-3 * t
     # Eoss = integrale de v dQ, exacte elle aussi.
@@ -115,19 +119,22 @@ def courbe(nom: str):
     # une quantite qui peut s'annuler.
     bords = np.unique(np.concatenate([
         np.linspace(0.0, 2.0, 25), np.geomspace(2.0, 149.0, 160)]))
-    idx = np.searchsorted(v, bords)
-    idx = np.clip(idx, 0, len(v) - 1)
-    ok = np.diff(idx) > 0
-    vb = (bords[:-1][ok] + bords[1:][ok]) / 2
-    cb = np.diff(q[idx])[ok] / np.diff(bords)[ok]
-    # LISSAGE LEGER, et uniquement sur l'affichage de Coss. Le binning
-    # laisse un bruit de quelques pour cent qui vient de la finesse des
-    # intervalles, pas du composant. Qoss et Eoss, eux, ne sont PAS
-    # lisses : ce sont des integrales exactes de I.t, et c'est sur elles
-    # que reposent Co(tr) et Co(er).
-    k = np.ones(7) / 7
-    cb = np.convolve(cb, k, mode="same")
-    cb[:3], cb[-3:] = cb[3], cb[-4]
+    idx = np.unique(np.clip(np.searchsorted(v, bords), 0, len(v) - 1))
+    # DIVISER PAR LE dV DES MEMES ECHANTILLONS, pas par la largeur
+    # NOMINALE de l'intervalle.
+    #
+    # Premiere version : `diff(q[idx]) / diff(bords)`. `searchsorted`
+    # cale le numerateur sur des ECHANTILLONS -- dQ est donc quantifie
+    # par multiples de I.dt -- tandis que le denominateur reste continu.
+    # L'ecart entre les deux vaut un echantillon, soit 1/7 a 1/14 de
+    # l'intervalle selon la tension : 7 a 14 % de bruit, exactement ce
+    # qu'on voyait en dents de scie sur la figure. Ce n'etait pas une
+    # propriete du composant, c'etait ma grille.
+    vb = (v[idx[:-1]] + v[idx[1:]]) / 2
+    cb = np.diff(q[idx]) / np.diff(v[idx])
+    # PLUS AUCUN LISSAGE. Il servait a masquer le bruit de quantification
+    # ci-dessus ; la cause etant corrigee, lisser reviendrait a maquiller
+    # une courbe qui n'en a plus besoin.
     coss = np.interp(v, vb, cb)
     for ext in ("cir", "raw", "log", "op.raw"):
         f.with_suffix("." + ext).unlink(missing_ok=True)
