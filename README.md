@@ -38,10 +38,10 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > | | retenu | critère décisif |
 > |---|---|---|
 > | fréquence | **200 kHz** | $E_{oss}f$ est une perte **fixe** : monter en fréquence coûte **0,19 pt à 50 W mais 1,54 pt à 8 W**, là où la carte vit |
-> | inductance | **`SER2211-333`, 33 µH** | $I_{sat}$ **7,1 A contre 4,4** pour le 47 µH de la même série — 52 % utilisés à 50 W contre 77 % |
-> | mode | **DCM sous 20 W, CCM au-dessus** | le CCM permanent demanderait **67 à 134 µH** : hors de la série SER2211 |
-> | transistor | **onsemi `FDT86113LZ`, SOT-223** | $C_{oss}$ 46 pF, premier des cinq à 8 W — **le calibre vaut 10× la technologie** |
-> | diode | **`V8PA22` Schottky Si 200 V** | à égalité avec le SiC 16 A, **moitié des pertes** du SiC 4 A |
+> | inductance | **`XAL1510-223`, 22 µH** | $I_{sat}$ utilisé à **23 %** contre **79 %** pour le 47 µH en stock, et **48 % de surface en moins** |
+> | mode | **transition assumée** — bande **13,5 → 47,4 W** selon $V_{in}$ | les **deux** modes purs sont hors de portée : le CCM demande 67–134 µH, le DCM est marginal de 1 % au coin bas |
+> | transistor | **un des trois 150 V DPAK** — non tranché | $C_{oss}$ à extraire : à charge partielle il décide, et un 7 mΩ est arrivé **dernier** derrière un 75 mΩ |
+> | diode | **`V8PA22` Schottky Si 200 V** | **2,0× de marge** même à $V_{out}$ = 100 V, et à égalité de pertes avec le SiC 16 A |
 >
 > **Le résultat structurel qui débloquait tout** : le choix n'a jamais été
 > entre DCM et CCM. Le CCM permanent est **hors de portée du boîtier
@@ -49,13 +49,25 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > dans la plage* contre *DCM partout* — et elle n'était écrite nulle part.
 >
 > **Le prototype avait raison sur la fréquence**, par intuition et avec les
-> pièces disponibles. L'instruction le confirme et ne corrige qu'une chose :
-> 47 → 33 µH, sur la marge de saturation.
+> pièces disponibles. L'instruction le confirme ; ce qu'elle corrige est
+> l'inductance, et pas pour la valeur seule mais pour la **famille** : le
+> `SER2211-473` en stock travaille à **79 % de son $I_{sat}$** en régime
+> nominal.
 >
-> **Un seul trou réel** : le spectre conduit de cette configuration à 8 W,
-> en DCM. La pénalité de 17–20 dB du chapitre 4 a été mesurée sur un DCM qui
-> ondulait **4,5 fois plus** — soit ~26 dB d'écart avant filtrage, par mise
-> à l'échelle en $I^2$. Une simulation le tranche.
+> **Il n'y a pas une frontière, il y a une bande.** $P_	ext{lim}$ varie en
+> $V_{in}^2(1-V_{in}/V_{out})$ : sur 12–25 V elle se déplace d'un **facteur
+> 3,5**. Annoncer « transition à 15 W » n'a de sens qu'à une seule tension
+> d'entrée.
+>
+> **Deux décisions d'architecture restent ouvertes**, et elles ne sont pas
+> des choix de composant :
+>
+> 1. **$V_{out}$ plafonné à 80 V, ou libre jusqu'à 100 V ?** À 100 V, un
+>    boîtier 150 V ne laisse que **20 V** de budget de surtension sous la
+>    règle des 80 % — il faudrait du 200 V. À 80 V le budget est de 40 V,
+>    confortable. Cela remonte au partage de tension entre les deux étages.
+> 2. **22 µH ou 33 µH ?** 3,5 dB d'ondulation contre 0,05 pt de rendement.
+>    Un spectre conduit le tranche.
 
 ![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
 

@@ -261,6 +261,176 @@ partielle. La seule correction que l'instruction justifie est
 
 ---
 
+## 9. Révision du 2026-11-21 — contraintes réelles du concepteur
+
+Trois apports qui changent la §8 : la transition est **assumée**, la
+fiabilité impose de la **marge en tension**, et le stock existe.
+
+### 9.1 Il n'y a pas une frontière, il y a une bande — facteur 3,5
+
+$P_\text{lim} \propto V_{in}^2(1-V_{in}/V_{out})$. Sur 12–25 V, ce terme
+passe de 122 à 430 : **la frontière se déplace d'un facteur 3,51**, à
+inductance et fréquence fixes. Parler d'« une transition à 15 W » n'a de
+sens qu'à une seule tension d'entrée.
+
+**Bande de frontière à 200 kHz**, de $V_{in}$ = 12 V à 25 V :
+
+| L | bande | couverture de la plage 5–50 W |
+|---|---|---|
+| SER2211-123 12 µH | 24,7 → 86,8 W | DCM presque partout |
+| XAL1510-153 15 µH | 19,8 → 69,5 W | DCM sauf haut de plage à $V_{in}$ bas |
+| **XAL1510-223 22 µH** | **13,5 → 47,4 W** | **la transition balaie toute la plage** |
+| XAL1510-333 33 µH | 9,0 → 31,6 W | CCM au-dessus de 32 W à toute tension |
+| SER2211-473 47 µH | 6,3 → 22,2 W | CCM dès 23 W à toute tension |
+
+**Et les modes purs sont bien illusoires, les deux.** Le CCM permanent
+demande 67 à 134 µH (§2). Le DCM permanent demande de rester sous la
+frontière à **toute** tension, donc au coin bas : la 12 µH y donne 24,7 W
+pour une puissance plafonnée à 25 W — **marginal de 1 %**. Ce n'est pas un
+dimensionnement, c'est une coïncidence.
+
+### 9.2 La moyenne géométrique, et pourquoi la borne basse a bougé
+
+$\sqrt{4{,}7 \times 47} = 14{,}8\ \mu$H. Le raisonnement est juste : sur un
+compromis à échelle logarithmique, le centre géométrique est le bon
+premier candidat.
+
+**Une réserve cependant** : les deux bornes n'étaient pas également
+fondées. Le 4,7 µH venait du **DCM permanent**, stratégie abandonnée au
+§9.1 ci-dessus. Si l'alternative réelle est « transition assumée », la
+borne basse remonte à ~15 µH — celle qui garde encore un sens — et le
+centre géométrique devient $\sqrt{15 \times 47} = 26{,}5\ \mu$H.
+
+La fenêtre **22 à 33 µH** est donc celle à instruire, et elle recoupe le
+haut de la fenêtre 10–22 proposée.
+
+### 9.3 L'inductance : le XAL1510 règle la fiabilité
+
+C'est le critère de fiabilité demandé, et l'écart est massif. Au **pire
+coin, 19 V / 50 W, 200 kHz** :
+
+| pièce | $I_{sat}$ | $I_{crête}$ | **$I_{sat}$ utilisé** | $I_{rms}$ utilisé | cuivre | surface |
+|---|---|---|---|---|---|---|
+| XAL1510-153 15 µH | 23,0 A | 5,13 A | **22 %** | 17 % | 85 mW | 225 mm² |
+| **XAL1510-223 22 µH** | **18,7 A** | 4,36 A | **23 %** | 21 % | 120 mW | **225 mm²** |
+| XAL1510-333 33 µH | 16,7 A | 3,81 A | **23 %** | 23 % | 145 mW | 225 mm² |
+| SER2211-333 33 µH | 7,1 A | 3,81 A | 54 % | ? | 83 mW | 432 mm² |
+| **SER2211-473 47 µH** *(stock)* | **4,4 A** | 3,48 A | **79 %** | ? | 81 mW | 432 mm² |
+
+**La pièce en stock est la pire sur la fiabilité** : 79 % d'$I_{sat}$ en
+régime nominal ne laisse rien pour un transitoire de charge ni pour la
+dérive en température. Le XAL1510 descend à **22–23 %**, soit un facteur
+3,4, pour **48 % de surface en moins**.
+
+Le prix : **+37 à +64 mW de cuivre** à 50 W, soit 0,07 à 0,13 pt. Et à
+5–10 W, là où la carte vit réellement, le cuivre tombe à **3 mW** : la
+pénalité ne mord qu'à pleine charge, là où elle est indolore.
+
+### 9.4 Entre 22 et 33 µH, ce qui décide
+
+| | 22 µH | 33 µH |
+|---|---|---|
+| ondulation à 50 W | 3,41 A | **2,27 A** → **−3,5 dB** |
+| cuivre à 50 W | **120 mW** | 145 mW *(+0,05 pt)* |
+| SRF publiée | **6,3 MHz** | 5,8 MHz |
+| bande de frontière | 13,5–47,4 W | **9,0–31,6 W** |
+| fiche téléchargée | — | **oui** |
+
+**Retenu : XAL1510-223, 22 µH**, dans la fenêtre proposée. L'écart de
+cuivre est de 0,05 pt, négligeable ; l'écart d'ondulation de 3,5 dB est
+réel mais petit devant les 17–20 dB en jeu, et la SRF est meilleure. Le
+**33 µH est le repli** si le spectre à 50 W passe mal.
+
+> **Modélisation SPICE — à dire explicitement.** Coilcraft ne publie le
+> modèle fréquentiel complet du XAL1510 que jusqu'au **10 µH**. Pour les
+> 15, 22 et 33 µH, seuls **L, DCR et SRF** sont publiés. On en tire un
+> modèle à trois éléments, $C_{par} = 1/((2\pi f_{SRF})^2 L)$, soit
+> **29,0 pF** pour le 22 µH et 22,8 pF pour le 33 µH.
+>
+> **Ce n'est pas une fabrication** : les trois valeurs sortent de la
+> fiche. C'est la différence exacte avec le modèle de `SER2013-472`
+> (§7), dont $k_1$, $k_2$ et $C$ étaient **inventés**. Le modèle à trois
+> éléments ne restitue pas le comportement au-delà de la SRF — il ne doit
+> pas servir à conclure sur le contenu HF au-delà de ~6 MHz.
+>
+> À noter : le XAL1510 porte **29 pF contre 9,1 pF** pour le SER2211 à
+> inductance égale, et une SRF de 6,3 contre 9,2 MHz. C'est le revers de
+> sa compacité, et c'est à surveiller sur le spectre.
+
+### 9.5 Marge en tension : le jeu de pièces rassemblé
+
+$V_{out}$ nominal 80 V, mais déclaré **libre de 20 à 100 V** (chapitre 3
+§1). Le transistor et la diode voient $V_{out}$ **plus la surtension**.
+
+**Diodes Schottky Vishay TMBS disponibles :**
+
+| réf | $V_{RRM}$ | $I_{F(AV)}$ | $V_F$ à 125 °C | boîtier |
+|---|---|---|---|---|
+| **V8PA22** | **200 V** | 8,0 A | 0,70 V à 8 A | SMPA DO-221BC |
+| V5N3202 | 200 V | 5 A | **0,58 V** à 2,5 A | DFN33A, AEC-Q101 |
+| V3N22 | 200 V | 3 A | 0,61 V à 1,5 A | DFN3820A |
+| V8PA15 | 150 V | 8,0 A | 0,68 V à 8 A | SMPA |
+| VSSAF515 | 150 V | 5,0 A | 0,66 V à 5 A | AEC-Q101 |
+
+**Retenu : `V8PA22`, 200 V** — **2,0× de marge** même à $V_{out}$ = 100 V,
+le plus gros boîtier donc la meilleure thermique, et la matrice du
+chapitre 4 l'a déjà mesurée sur modèle constructeur. Le courant moyen de
+diode vaut 0,625 A à 50 W : les 8 A sont surdimensionnés *exprès*.
+Le `V5N3202` est l'alternative compacte et AEC-Q101, à $V_F$ plus bas mais
+thermique plus serrée.
+
+**Transistors 150 V en DPAK disponibles :**
+
+| réf | $V_{DS}$ | $R_{ds(on)}$ | $I_D$ |
+|---|---|---|---|
+| **FDD770N15A** | 150 V | 61 mΩ typ / 77 max | 18 A |
+| FDD86252 | 150 V | 52 mΩ max | 27 A |
+| IPD200N15N3 | 150 V | **20 mΩ** max | 50 A |
+
+> ### ⚠ La marge en tension du transistor n'est pas acquise
+>
+> À $V_{out}$ = 100 V, un boîtier 150 V laisse **50 V** pour la
+> surtension. La règle usuelle — $V_{ds}$ crête sous 80 % du calibre —
+> donne un budget de **20 V seulement**. À $V_{out}$ = 80 V le budget
+> remonte à 40 V, confortable.
+>
+> **Donc : soit $V_{out}$ est plafonné à 80 V et les 150 V suffisent, soit
+> $V_{out}$ monte à 100 V et il faut du 200 V.** C'est une décision
+> d'architecture qui remonte au partage de tension entre les deux étages,
+> pas un choix de composant. **Non tranchée.**
+
+**Et le classement de ces trois n'est pas celui du $R_{ds}$.** Le
+chapitre 2 §11 a établi que **le $C_{oss}$ décide à charge partielle** :
+le SuperSO8 à 7 mΩ est arrivé **dernier** des cinq à 8 W (95,83 %),
+derrière un SOT-223 à 75 mΩ (98,60 %). L'`IPD200N15N3` à 20 mΩ est la
+plus grosse puce des trois, donc *a priori* la pire à 5–10 W.
+
+**À faire avant de trancher** : extraire $C_{oss}(V)$, $E_{oss}$ et $Q_g$
+des trois fiches — le dépôt a l'outil,
+`.claude/skills/sim-spice/scripts/extraction_composant.py`, et le
+chapitre 2 §11.2 la méthode. **Je ne classe pas ces trois sans ces
+chiffres** : c'est exactement la faute qui a fait retenir une pièce
+thermiquement intenable au chapitre 3 §3.
+
+### 9.6 État des cinq choix après révision
+
+| | retenu | confiance |
+|---|---|---|
+| fréquence | **200 kHz** | **mesuré** — 343 cellules, optimum sur toute la plage |
+| mode | **transition assumée**, bande 13,5–47,4 W selon $V_{in}$ | **acquis** — les deux modes purs sont hors de portée |
+| inductance | **XAL1510-223 22 µH** | **fiche** — $I_{sat}$ à 23 %, modèle 3 éléments seulement |
+| diode | **V8PA22 200 V** | **mesuré** — matrice chapitre 4, 2,0× de marge |
+| transistor | **parmi les trois 150 V** | **non tranché** — $C_{oss}$ à extraire |
+
+**Deux décisions d'architecture restent à toi** :
+
+1. **$V_{out}$ plafonné à 80 V, ou libre jusqu'à 100 V ?** Il en découle
+   150 V ou 200 V sur le transistor.
+2. **Le 22 µH ou le 33 µH ?** 3,5 dB d'ondulation contre 0,05 pt de
+   rendement — un spectre conduit le tranche.
+
+---
+
 ## Reproduire
 
 Les chiffres de frontière, d'ondulation et de courant crête de ce document
