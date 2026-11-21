@@ -79,6 +79,9 @@ def mesure(raw, ser):
              + 0.5 * COSN * (vs[-1] ** 2 - vs[0] ** 2) + dEl
              + 0.5 * LB * (ilb[-1] ** 2 - ilb[0] ** 2)) / T
 
+    pg = None
+    if "I(Rgx)" in r.noms():
+        pg = moy(g("V(ng)") * g("I(Rgx)"))
     griefs = [(x.rang, x.ref, x.texte) for x in
               (fenetre_entiere(tt, 200e3)
                + bilan_ferme(pin, pout, pert, stockage=stock) + rec)]
@@ -86,7 +89,7 @@ def mesure(raw, ser):
     mort = (g("V(ng)") < 2.5) & (np.abs(idd) < 0.01)
     pres = float(np.trapezoid(np.where(mort, sum(
         [moy(0) * 0 + p for p in []], np.zeros_like(tt)) * 0, 0.0), tt))
-    bil = dict(pin=pin, pout=pout, pert=pert, stock=stock,
+    bil = dict(pin=pin, pout=pout, pert=pert, stock=stock, pg=pg,
                rend=100 * pout / pin, ipk=float(il.max()), imin=float(il.min()),
                vmort=float(vs[mort].max() - vs[mort].min()) if mort.any() else 0,
                tmort=100 * float(np.trapezoid(mort.astype(float), tt)) / T)
@@ -108,6 +111,9 @@ def rapport(nom, bil, griefs):
           f"stockage {bil['stock']*1e3:+.4f} mW")
     print(f"    I crete {bil['ipk']:.3f} A   I min {bil['imin']:+.3f} A   "
           f"temps mort {bil['tmort']:.0f} % sur {bil['vmort']:.1f} V")
+    if bil.get("pg") is not None:
+        print(f"    grille : {bil['pg']*1e3:.2f} mW pris au driver "
+              f"(budget SEPARE, ne vient pas de Vbat)")
     ko = [x for x in griefs if x[0] == REFUS]
     for r_, c, tx in griefs:
         print(f"    [{r_:6s}] {c} {tx[:88]}")
@@ -123,7 +129,9 @@ if __name__ == "__main__":
     for tag, nom, kw in (
             ("s0", "ETAPE 0  tout ideal", dict(ser=False, v8pa22=False)),
             ("s1", "ETAPE 1  + SER2211 constructeur", dict(ser=True, v8pa22=False)),
-            ("s2", "ETAPE 2  + V8PA22 constructeur", dict(ser=True, v8pa22=True))):
+            ("s2", "ETAPE 2  + V8PA22 constructeur", dict(ser=True, v8pa22=True)),
+            ("s3", "ETAPE 3  + IPD530N15N3 constructeur",
+             dict(ser=True, v8pa22=True, mos=True))):
         raw = lance(tag, **cfg, **kw)
         b, g = mesure(raw, ser=kw["ser"])
         res[nom] = (b, g)

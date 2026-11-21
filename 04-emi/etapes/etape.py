@@ -56,7 +56,7 @@ SER2211 = ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0)
 
 def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
-           v8pa22=False, l_maille=10e-9):
+           v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -131,6 +131,83 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
         else:
             rb = DCR + RDS * a["duty"]
             duty = 1.0 - (VIN - a["iin"] * rb - VF) / VOUT
+    # ETAPE 3 : l'interrupteur IDEAL devient le transistor CONSTRUCTEUR.
+    #
+    # Variante `_L1` : trois broches, AVEC l'inductance de boitier publiee
+    # (Ls = 2 nH, Ld = 1 nH, Lg = 3 nH). Le modele porte la sienne, on ne
+    # lui en ajoute jamais une de l'exterieur -- la maille Lb de 10 nH
+    # represente le ROUTAGE de la carte, pas les fils de bonding, et les
+    # deux coexistent.
+    #
+    # DEUX PARAMETRES DU MODELE VALIDENT LA COMPARAISON
+    #   Rmax = 53 m  exactement le Ron qu'on avait pose en ideal
+    #   Unn  = 10 V  la grille nominale -- les 5 V venaient du GaN
+    #
+    # LES 10 OHMS DE GRILLE PRENNENT ENFIN LEUR SENS ICI. Le `.model SW`
+    # est commande en TENSION, il n'a aucune capacite de grille : une
+    # resistance de grille n'y changeait rien, et les fronts devaient
+    # etre ralentis par leur DUREE. Le transistor reel a un vrai Qg, et
+    # 2,1 ohms de grille internes qui s'ajoutent aux 10 externes.
+    #
+    # CE QU'IL FAUT ATTENDRE : la diode de CORPS. L'interrupteur ideal
+    # laissait V(nsw) descendre a -78 V pendant la sonnerie de temps
+    # mort ; le transistor reel l'ecretera vers -0,8 V. Le temps mort
+    # portait 46 % des pertes a l'etape 2 : il va changer beaucoup.
+    #
+    # DEUX MODELES, PARCE QUE LE PREMIER NE CONVERGE PAS.
+    #
+    # L'IPD530N15N3 ne passe qu'a Rg = 10 ohms. A 2,2, 4,7, 22 et 47 il
+    # casse au PREMIER pas transitoire -- le point de repos, lui, converge
+    # ("Direct Newton iteration succeeded"). Le journal designe le coupable :
+    # `trouble with node x1:x1:e_eds7#branch`, une source comportementale
+    # interne. Le modele est RAIDE, ce n'est pas une faute de cablage : les
+    # cinq netlists ne different que par la valeur de Rgx.
+    #
+    # Le FDD770N15A est de structure toute differente : 69 lignes, coeur
+    # BSIM3 (LEVEL=7), et surtout DES RESISTANCES D'AMORTISSEMENT en
+    # parallele sur chaque inductance de boitier (RLgate 55 ohms, RLdrain
+    # 1 ohm, RLsource 27 ohms). C'est precisement ce qui manque au modele
+    # Infineon, dont les inductances sont pures.
+    #
+    # Les deux sont comparables par ailleurs : DPAK, 150 V, et un Rdson
+    # de 51,5 mohms (48,6 de drain + 2,9 de source) contre 53.
+    #
+    # LES DEUX RESTENT DISPONIBLES. Un modele constructeur ne se remplace
+    # pas par un autre a la legere -- la session a deja paye cette lecon
+    # (Wolfspeed 180 s d'abandon contre Infineon 2,8 s). On garde donc les
+    # deux et on compare, au lieu de substituer en silence.
+    nom_mos = {True: "ipd530", False: None}.get(mos, mos)
+    if nom_mos == "fdd770":
+        bloc_s = chr(10).join((
+            f"* transistor CONSTRUCTEUR onsemi FDD770N15A, DPAK 150 V",
+            f"* boitier inclus et AMORTI (Lg 5,5n//55R, Ld 0,1n//1R, "
+            f"Ls 2,7n//27R)",
+            f"X1   nsw  ngg  0    FDD770N15A",
+            f"Rgx  ng   ngg  {rg:.4g}",
+            f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
+            f"{{duty*tsw}} {{tsw}})",
+            (LIB / "onsemi" / "FDD770N15A.lib").read_text(encoding="utf-8",
+                                                          errors="replace")))
+    elif nom_mos:
+        bloc_s = chr(10).join((
+            f"* transistor CONSTRUCTEUR Infineon IPD530N15N3, DPAK 150 V",
+            f"* variante _L1 : boitier inclus (Ls 2n, Ld 1n, Lg 3n), NON amorti",
+            f"X1   nsw  ngg  0    IPD530N15N3_L1",
+            f"Rgx  ng   ngg  {rg:.4g}",
+            f"Vg   ng   0    PULSE(0 {vgs:.3g} 0 {tr:.3e} {tr:.3e} "
+            f"{{duty*tsw}} {{tsw}})",
+            f'.inc "{(LIB / "Infineon" / "OptiMOS3_150V_LTSpice.lib").as_posix()}"'))
+    else:
+        bloc_s = chr(10).join((
+            "* interrupteur IDEAL. Le `.model SW` est commande en TENSION :",
+            "* il n'a AUCUNE capacite de grille, donc une resistance de",
+            "* grille n'y change rien. Les fronts se ralentissent par leur",
+            "* DUREE. Les 10 ohms prendront leur sens a l'etape 3.",
+            f"S1   nsw  0    ng 0 MSW",
+            f".model MSW SW(Ron={RDS:.6f} Roff=1meg Vt=2.5 Vh=0)",
+            f"Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} "
+            f"{{duty*tsw}} {{tsw}})"))
+    sv_rg = " I(Rgx)" if nom_mos else ""
     tsw = 1.0 / FSW
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
@@ -154,13 +231,7 @@ Vbat nin  0    DC {VIN}
 
 {bloc_l}
 
-* interrupteur IDEAL. Le `.model SW` est commande en TENSION : il n'a
-* AUCUNE capacite de grille, donc une resistance de grille n'y change
-* rien. Les fronts se ralentissent par leur DUREE. Les 10 ohms prendront
-* leur sens a l'etape 3, avec l'IPD530N15N3 qui a un vrai Qg.
-S1   nsw  0    ng 0 MSW
-.model MSW SW(Ron={RDS:.6f} Roff=1meg Vt=2.5 Vh=0)
-Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} {{duty*tsw}} {{tsw}})
+{bloc_s}
 
 * PAS de condensateur sur le noeud de commutation aux etapes 0 a 2.
 *
@@ -168,14 +239,16 @@ Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} {{duty*tsw}} {{tsw}})
 * Cj de la diode donnait dans un interrupteur parfait. La MAILLE regle ce
 * probleme a la source ; la capacite, elle, en creait un autre, plus gros
 * et mieux cache : sur un interrupteur IDEAL le canal est instantane, donc
-* la decharge vaut V/Ron = 28,3/0,053 = 534 A, bornee par le seul PAS
-* D'INTEGRATION. Releve : 220 A de pointe a l'etape 0, et un bilan
-* energetique ouvert de 21,3 % -- l'energie partait dans un pic trop
-* bref pour que moy(v.i) le voie.
+* la decharge vaut V/Ron = 534 A, bornee par le seul PAS D'INTEGRATION.
+* Releve : 220 A de pointe, et un bilan ouvert de 21,3 % -- l'energie
+* partait dans un pic trop bref pour que moy(v.i) le voie.
 *
-* Le Coss est REEL, mais il est indissociable du gm fini qui borne sa
-* decharge. Les deux arrivent ensemble a l'etape 3, avec l'IPD530N15N3.
-* Les mettre separement, c'est modeliser la moitie qui fait mal.
+* Le Coss est REEL, mais indissociable du gm fini qui borne sa decharge.
+* Les deux arrivent ensemble a l'etape 3, avec l'IPD530N15N3.
+*
+* La valeur de 1 aF n'est pas un composant : c'est une sonde. Elle laisse
+* `I(Cosn)` exister pour que les scripts d'analyse restent identiques
+* d'une etape a l'autre -- c'est ce qui rend deux etapes comparables.
 Cosn nsw  0    {max(c_noeud, 1e-18):.3e}
 
 {bloc_d}
@@ -184,8 +257,8 @@ Vd   nd   nout DC 0
 .options plotwinsize=0
 .tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
 
-.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda)
-.save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn) I(Lb)
+.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda) V(ngg)
+.save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn) I(Lb){sv_rg}
 .meas TRAN iin  AVG -I(Vbat)     FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN il   AVG I(L1)        FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN ilmx MAX I(L1)        FROM {t0:.6e} TO {t1:.6e}
