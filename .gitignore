@@ -15,3 +15,10 @@ __pycache__/
 
 # Netlists generees par les scripts -- regenerables
 *.cir
+
+# Images intermediaires de mise au point -- les figures retenues sont
+# versionnees nommement, pas par lot.
+etapes/x_*.png
+etapes/dbg*
+etapes/v_tmp*
+etapes/sonn*
