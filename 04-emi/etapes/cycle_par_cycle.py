@@ -35,7 +35,8 @@ from simcommun.lecture import lire                            # noqa: E402
 FSW, VIN, L_H = 200e3, 19.0, 47e-6
 CAS = (("s0", "ÉTAPE 0  tout idéal"),
        ("s1", "ÉTAPE 1  + SER2211"),
-       ("s2", "ÉTAPE 2  + V8PA22"))
+       ("s2", "ÉTAPE 2  + V8PA22"),
+       ("s3", "ÉTAPE 3  + IPD530N15N3"))
 
 
 def main() -> int:

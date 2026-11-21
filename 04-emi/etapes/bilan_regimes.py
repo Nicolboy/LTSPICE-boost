@@ -41,7 +41,8 @@ FSW, LB, RON = 200e3, 10e-9, 0.053
 # (fichier, libellé, modèle d'inductance, Cj déduite de la fréquence)
 CAS = (("s0", "ÉTAPE 0  tout idéal", False, 11.67e-12, 0.020),
        ("s1", "ÉTAPE 1  + SER2211", True, 11.67e-12, 0.020),
-       ("s2", "ÉTAPE 2  + V8PA22", True, 45.19e-12, None))
+       ("s2", "ÉTAPE 2  + V8PA22", True, 45.19e-12, None),
+       ("s3", "ÉTAPE 3  + IPD530N15N3", True, 45.19e-12, None))
 
 
 def decoupe(r, sl, tt):

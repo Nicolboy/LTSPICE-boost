@@ -647,3 +647,47 @@ L'Infineon stocke **2,1× la charge de recouvrement**. En DCM la diode de
 corps conduit à chaque excursion négative du temps mort, donc **la
 simulation est le cas pessimiste** : la pièce montée devrait faire un peu
 mieux. C'est la bonne direction pour un écart qu'on ne maîtrise pas.
+
+## N — Décomposer ce qui stocke (2026-11-21)
+
+La décomposition par régime, qui avait si bien servi aux étapes 0 à 2,
+rend à l'étape 3 un MOSFET à **−38,27 mW pendant le temps mort**.
+
+Ce n'est pas une génération d'énergie. Le transistor réel a un $C_{oss}$,
+qui se charge à l'ouverture et se décharge à la fermeture. Le flux de
+stockage vaut :
+
+| régime | flux |
+|---|---|
+| transfert | **+188,9 mW** |
+| temps mort | **−131,5 mW** |
+| conduction | **−57,2 mW** |
+| somme sur le cycle | **+0,20 mW** |
+
+Il se compense, comme il doit. Mais découpé par régime il ne se compense
+pas, et la décomposition attribue à la dissipation ce qui n'est que du
+transfert d'un régime vers un autre.
+
+> Une décomposition par phase n'a de sens que pour des éléments purement
+> DISSIPATIFS. Dès qu'un élément stocke, seul le total sur un cycle
+> entier veut dire quelque chose.
+
+Les étapes 0 à 2 n'avaient aucune capacité de nœud ($C_{osn}$ = 1 aF) :
+la faute ne pouvait pas s'y voir, et j'ai appliqué l'outil au cas suivant
+sans me demander si son hypothèse tenait encore.
+
+**Les totaux par élément restent justes** — $S_1$ = 86,91 mW côté drain,
+recoupé à 89,36 mW en incluant la grille, et le bilan ferme à 0,02 %.
+
+### Ce que le bilan dit, et qui n'était pas prévu
+
+| élément | pertes | part |
+|---|---|---|
+| **$R_p$ inductance** | **139,30 mW** | **47,0 %** |
+| MOSFET | 86,91 mW | 29,3 % |
+| diode | 65,16 mW | 22,0 % |
+| $R_s$ + $R_c$ inductance | 4,87 mW | 1,7 % |
+
+À 8 W en DCM, **près de la moitié des pertes est dans la résistance
+parallèle de l'inductance**, pas dans les semi-conducteurs. Le levier
+n'est pas là où toute la session l'a cherché.

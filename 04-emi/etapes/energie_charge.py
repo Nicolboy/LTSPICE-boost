@@ -42,7 +42,8 @@ from simcommun.lecture import lire                            # noqa: E402
 FSW, VIN, VOUT, L_H = 200e3, 19.0, 80.0, 47e-6
 CAS = (("s0", "ÉTAPE 0  tout idéal", False),
        ("s1", "ÉTAPE 1  + SER2211", True),
-       ("s2", "ÉTAPE 2  + V8PA22", True))
+       ("s2", "ÉTAPE 2  + V8PA22", True),
+       ("s3", "ÉTAPE 3  + IPD530N15N3", True))
 REG = ("1 transfert", "2 temps mort", "3 conduction")
 
 
