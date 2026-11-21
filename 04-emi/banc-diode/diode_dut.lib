@@ -1,0 +1,51 @@
+* =====================================================================
+* DIODE SOUS TEST -- decommenter UNE SEULE section
+* =====================================================================
+* Le schema n'a jamais a changer : il appelle toujours le sous-circuit
+* `DUT`, a deux broches, anode puis cathode. C'est ici qu'on choisit la
+* piece, et le cablage des broches supplementaires (boitier, noeuds
+* thermiques) est deja fait pour chacune.
+*
+* Les brochages sont LUS dans les `.SUBCKT` des constructeurs, pas
+* devines : le C3D a une premiere broche NC, et la cabler a l'anode fait
+* debiter 0,00 W a une diode qui converge parfaitement.
+* =====================================================================
+
+.inc ..\..\..\lib_spice_commun\Infineon\CoolSiC_G6_650V.lib
+.inc ..\..\..\lib_spice_commun\Wolfspeed\C6D04065A.lib
+.inc ..\..\..\lib_spice_commun\Wolfspeed\C3D16065D1.lib
+
+* ---------------------------------------------------------------------
+* 1. Infineon CoolSiC G6 -- SiC Schottky 650 V / 4 A   [ACTIF]
+*    .SUBCKT IDH04G65C6_L1 ANODE KATODE
+.subckt DUT a k
+XD a k IDH04G65C6_L1
+.ends DUT
+
+* ---------------------------------------------------------------------
+* 2. Wolfspeed C6D -- SiC Schottky 650 V / 4 A
+*    .SUBCKT C6D04065A A K Case Tj Tc
+*.subckt DUT a k
+*XD  a k ncase ntj ntc C6D04065A
+*Rc  ncase 0 1meg
+*Vtc ntc 0 25
+*.ends DUT
+
+* ---------------------------------------------------------------------
+* 3. Wolfspeed C3D -- SiC Schottky 650 V / 16 A, generation anterieure
+*    .SUBCKT C3D16065D1 NC A K Case Tj Tc   <- PREMIERE BROCHE NON CONNECTEE
+*.subckt DUT a k
+*XD  nnc a k ncase ntj ntc C3D16065D1
+*Rnc nnc 0 1meg
+*Rc  ncase 0 1meg
+*Vtc ntc 0 25
+*.ends DUT
+
+* ---------------------------------------------------------------------
+* 4. Vishay V8PA22 -- Schottky silicium 200 V / 8 A
+*.subckt DUT a k
+*D1 a k DV8PA22
+*.model DV8PA22 D(is=7e-05 rs=0.00741429 n=2.62377 xti=13.7366 bv=220
+*+ eg=0.71 cjo=6.85e-10 m=1 vj=5.36 tt=7.73585e-10 ikf=0 fc=0.5
+*+ ibv=1e-10 isr=-7.00037e-07 trs1=-0.00514056)
+*.ends DUT

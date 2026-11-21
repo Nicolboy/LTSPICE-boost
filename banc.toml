@@ -1,0 +1,57 @@
+# FICHE DE BANC — LTSPICE-boost, étage 1 : 20 V -> 80 V, 400 kHz
+#
+# Les prémisses du montage RÉEL, déclarées une fois, confrontées à chaque
+# netlist par .claude/skills/sim-spice/scripts/gendarme.py.
+#
+# Établie le 2026-11-21 d'après les corrections du concepteur en session.
+# NE PAS la déduire d'un fichier de banc antérieur : c'est exactement la
+# faute A1-A5 (six divergences, six reprises du concepteur).
+
+[montage]
+inductance    = "SER2211-473 47 µH"          # Coilcraft, modèle Model1D publié
+mode          = "CCM"                        # transition DCM/CCM entre 10 et 20 W
+diode         = "Wolfspeed C3D16065D1 650 V" # .SUBCKT : NC A K Case Tj Tc (6 nœuds)
+interrupteur  = "Infineon BSC360N15NS3"
+reseau_entree = "220 µF ∥ (1000 µF + 500 mΩ placée) ∥ 1 µF MLCC"
+
+# Les 500 mΩ sont une résistance PLACÉE, branche d'amortissement RC — pas
+# une ESR. Les lire comme un parasite efface une décision de conception (A6).
+
+[conditions]
+vin_v  = 20.0
+vout_v = 80.0
+fsw_hz = 400e3
+rg_ohm = 10.0
+dvdt_v_ns = 73.0
+r_boucle_ohm = 0.016           # DCR 10,7 mΩ + Rds 5 mΩ : fixe τ = L/R ≈ 3 ms
+justification_vitesse = """\
+Rg = 10 Ω retenu à l'arbitrage CEM du chapitre 4. Les 1 Ω / 150 ps du banc \
+initial étaient un défaut hérité d'un banc GaN, jamais questionné : ils \
+donnaient 385 V/ns et ont invalidé tout le contenu HF du chapitre (A5)."""
+
+[mesurande]
+grandeur = "pertes diode"
+p_nom_w  = 40.0
+ordre_de_grandeur_w = 0.4      # 337 à 809 mW selon la diode, à 40 W
+regime   = "etabli"
+asservi  = false
+# À 47 µH la boucle fait ~16 mΩ, donc τ ≈ 3 ms : une fenêtre de 9 ms est
+# hors de portée. La campagne du 2026-11-20 a tranché par la correction
+# ½L(I₁²−I₀²)/T, mesurée sur la fenêtre. On la DÉCLARE, elle n'est pas
+# implicite — sans elle, 2,59 W de fausse perte (D5).
+correction_energie_stockee = true
+
+[provenance]
+# "datasheet" | "utilisateur" | "POSEE"
+l_47uh          = "datasheet"     # Coilcraft SER2211-473, modèle publié
+diode_c3d       = "datasheet"     # modèle Wolfspeed, passe tel quel sans uic
+mosfet          = "datasheet"     # PSpice Infineon OptiMOS 150 V
+mode_et_reseau  = "utilisateur"   # prototype de juillet-août, corrigé en session
+esr_220uf       = "POSEE"         # référence Panasonic exacte non obtenue
+esr_1000uf      = "POSEE"         # idem
+l_maille        = "POSEE"         # balayée 1-16 nH, aucune valeur mesurée
+classe_cispr25  = "POSEE"         # classe 3 = hypothèse de travail, non tranchée
+
+# Les quatre POSÉES ci-dessus doivent apparaître dans toute conclusion qui
+# en dépend. L'ESR du 220 µF à elle seule fait basculer la marge de
+# stabilité de −3,4 à +28,9 dB.
