@@ -40,7 +40,7 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > | fréquence | **200 kHz** | $E_{oss}f$ est une perte **fixe** : monter en fréquence coûte **0,19 pt à 50 W mais 1,54 pt à 8 W**, là où la carte vit |
 > | inductance | **`XAL1510-223`, 22 µH** | $I_{sat}$ utilisé à **23 %** contre **79 %** pour le 47 µH en stock, et **48 % de surface en moins** |
 > | mode | **transition assumée** — bande **13,5 → 47,4 W** selon $V_{in}$ | les **deux** modes purs sont hors de portée : le CCM demande 67–134 µH, le DCM est marginal de 1 % au coin bas |
-> | transistor | **onsemi `FDD770N15A`**, 150 V DPAK | relevé sur fiche : les trois FOM sont dans un mouchoir (17–21 nJ·Ω), donc **seul le calibre décide** — et à 5–10 W l'`IPD200N15N3` est **5 à 10× trop grosse** |
+> | transistor | **Infineon `BSC900N20NS3 G`**, 200 V SuperSO8 | **à égalité à 8 W** avec le meilleur 150 V (94,5 contre 96,4 mW, sous la résolution) pour **2,5× de marge en tension** au lieu de 1,9× |
 > | diode | **`V8PA22` Schottky Si 200 V** | **2,0× de marge** même à $V_{out}$ = 100 V, et à égalité de pertes avec le SiC 16 A |
 >
 > **Le résultat structurel qui débloquait tout** : le choix n'a jamais été
@@ -75,6 +75,19 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 >
 > Le zéro à droite impose un crossover sous **14 kHz** (pire cas 41,7 kHz
 > à 12 V / 25 W) — tenable dans les deux modes sans rien commuter.
+>
+> → **[`03-architectures/zeros-3d.html`](03-architectures/zeros-3d.html)** —
+> le plant lui-même, 882 points. $f_z = V_{in}^2/(2\pi L P)$ : **$V_{out}$
+> se simplifie**. Étant en $1/L$, **plus l'inductance est petite, plus le
+> zéro est haut** — 30,6 kHz à 15 µH contre **9,8 kHz à 47 µH**, et 3
+> mailles contraignantes contre 19. **Deuxième argument indépendant** pour
+> la fenêtre 10–22 µH.
+>
+> **$C_{out}$ : 300 µF, et l'ESR est à spécifier.** Non amorti, le $Q$ du
+> double pôle monte à **118 (+41 dB)**. Un aluminium à 100 mΩ le ramène à
+> 2,6 et place son zéro à 5,3 kHz, juste sous le crossover — il y apporte
+> +90° de phase. **Un polymère faible ESR annulerait cet amortissement** :
+> c'est un élément de conception, comme les 500 mΩ d'entrée.
 >
 > **Reste ouvert** : $V_{out}$ plafonné à 80 V règle la tenue en tension —
 > les trois DPAK 150 V passent avec 40 V de budget de surtension. Mais

@@ -525,7 +525,32 @@ la fenêtre 10–22 µH proposée par le concepteur : avec 33 µH la frontière
 tombe à 9,0 W au coin bas, en plein dans la fourchette privilégiée. Avec
 22 µH elle reste au-dessus à toute tension d'entrée.
 
-> **Surface interactive : [`frontiere-3d.html`](frontiere-3d.html)** —
+> **Deux surfaces interactives**, qui ne disent pas la même chose :
+>
+> **[`zeros-3d.html`](zeros-3d.html)** — le plant lui-même. Axes
+> $X = V_{in}$, $Y = P_{out}$, $Z$ au choix : zéro à droite, plafond de
+> crossover, double pôle, $Q$ effectif. 882 points, $L$ et $C_{out}$
+> sélectionnables. Les mailles **en DCM sont en orange** (la formule CCM y
+> est une borne inférieure), celles dont le plafond tombe **sous 14 kHz**
+> sont cerclées de rouge.
+>
+> **Et le résultat y est net** : $f_z = V_{in}^2/(2\pi L P)$ étant en
+> $1/L$, **plus l'inductance est petite, plus le zéro est haut** —
+> c'est-à-dire plus la boucle est facile :
+>
+> | L | $f_z$ minimum | mailles sous 14 kHz |
+> |---|---|---|
+> | 15 µH | 30,6 kHz | 3 / 49 |
+> | **22 µH** | **20,8 kHz** | **6 / 49** |
+> | 33 µH | 13,9 kHz | 13 / 49 |
+> | 47 µH | **9,8 kHz** | **19 / 49** |
+>
+> **Deuxième argument indépendant** pour la fenêtre 10–22 µH, après celui
+> du §10.5 : le 47 µH en stock dégrade le plant autant qu'il éloigne la
+> frontière. À 22 µH il reste 6 mailles contraignantes, toutes au coin bas
+> en pleine charge.
+>
+> **[`frontiere-3d.html`](frontiere-3d.html)** —
 > $P_{lim}(V_{in}, L)$ à $V_{out}$ = 80 V, quatre fréquences, mailles
 > à éviter cerclées de rouge. 168 points, analytiques, recoupés sur le
 > tableau **mesuré** du chapitre 1 §5.
@@ -585,13 +610,57 @@ grosse, le $C_{oss}$ domine)*
 trop grosse.** C'est exactement le piège du SuperSO8 à 7 mΩ, arrivé
 **dernier des cinq** à 8 W au chapitre 2.
 
-**Retenu : `FDD770N15A`** — le seul des trois dont le calibre approche
-l'optimum à 5–10 W, et le seul dont le $C_{oss(er)}$ est publié.
+### 11.1 Révision — le `BSC900N20NS3 G` l'emporte, et le `FDT86113LZ` est écarté
 
-> **Réserve honnête** : le `FDT86113LZ` du chapitre 2 reste meilleur sur
-> les deux tableaux — FOM 13,2 contre 20,9 (**−37 %**) et 75 mΩ pour un
-> optimum de 95 mΩ à 8 W. Il n'est pas dans le jeu téléchargé, et sa
-> tenue en tension est **à vérifier** avant de le remettre en lice.
+**Le `FDT86113LZ` du chapitre 2 est disqualifié, pour deux raisons
+indépendantes relevées sur sa fiche :**
+
+1. **100 V, pas 150.** Sur un rail à 80 V, 80 % de 100 V font **exactement
+   80 V** : budget de surtension **nul**.
+2. **$I_D$ = 3,3 A** en continu, contre **4,28 A** de crête à 50 W avec
+   22 µH.
+
+> Cela remonte au chapitre 2 : **sa pièce gagnante était un 100 V simulé
+> sur une sortie à 80 V**, et sa FOM flatteuse vient en partie de là — une
+> pièce basse tension a intrinsèquement une meilleure FOM. À reprendre dans
+> ce chapitre.
+
+**Le `BSC900N20NS3 G` publie $C_{oss}$ ET $Q_{oss}$ au même point** — 52 pF
+et 20 nC à 100 V — donc l'exposant se **déduit** au lieu d'être supposé :
+$Q/(C\cdot V) = 3{,}85 \Rightarrow C_{oss}\propto V^{-0{,}74}$, d'où
+$E_{oss}(80\ \mathrm{V})$ = **312 nJ**. Aucune valeur dérivée d'une autre famille.
+
+| pièce | $V_{DS}$ | $R_{ds}$ | $E_{oss}$(80 V) | FOM | marge | boîtier |
+|---|---|---|---|---|---|---|
+| **BSC900N20NS3 G** | **200 V** | 77 mΩ | **312 nJ** | 24,0 | **2,5×** | SuperSO8 5×6 |
+| FDD770N15A | 150 V | 61 mΩ | 342 nJ | 20,9 | 1,9× | DPAK |
+| FDD86252 | 150 V | 41 mΩ | 417 nJ | 17,1 | 1,9× | DPAK |
+| IPD200N15N3 | 150 V | 16 mΩ | 1143 nJ | 18,3 | 1,9× | DPAK |
+| ~~FDT86113LZ~~ | ~~100 V~~ | ~~100 mΩ~~ | ~~176 nJ~~ | ~~17,6~~ | **1,2×** | **écarté** |
+
+La FOM du 200 V est bien un peu moins bonne — **24,0 contre 20,9**, soit
+le prix de l'épitaxie plus épaisse. **Mais ce n'est pas la FOM qui décide,
+c'est le calibre**, et le bilan au point d'emploi les départage :
+
+| pièce | conduction | $C_{oss}$ | grille | **total à 8 W** | total à 50 W |
+|---|---|---|---|---|---|
+| **BSC900N20NS3 G** | 14,2 mW | 62,3 mW | 18,0 mW | **94,5 mW** | 784 mW |
+| FDD770N15A | 11,2 mW | 68,4 mW | 16,8 mW | **96,4 mW** | 642 mW |
+| FDD86252 | 7,6 mW | 83,4 mW | 22,6 mW | 113,6 mW | 480 mW |
+| IPD200N15N3 | 3,0 mW | 228,6 mW | 46,0 mW | **277,6 mW** | 421 mW |
+
+**À 8 W les deux premiers sont à égalité** — 94,5 contre 96,4 mW, soit
+2 %, sous la résolution. Le `BSC900N20NS3` gagne donc **2,5× de marge en
+tension pour rien**, dans un boîtier plus petit. Il coûte 142 mW de plus à
+50 W (0,28 pt), hors de la fourchette privilégiée.
+
+Et l'`IPD200N15N3` confirme la règle : **trois fois la perte à 8 W**, dont
+229 mW de seul $C_{oss}$. La plus grosse puce est la pire là où la carte
+travaille.
+
+**Retenu : `BSC900N20NS3 G`**, Infineon OptiMOS 3, 200 V, SuperSO8 5×6.
+Modèle PSpice disponible
+(`infineon-powermosfet-optimos-pspice-200v-n-channel-simulationmodels-en`).
 
 ---
 
