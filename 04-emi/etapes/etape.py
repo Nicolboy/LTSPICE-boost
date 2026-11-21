@@ -56,14 +56,16 @@ SER2211 = ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0)
 
 def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
-           v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0):
+           v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
+           vin=None, rl=None):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
     rapport cyclique, le courant et le mode prevus par la formule fermee,
     rien de ce qui suit n'a de sens.
     """
-    a = attendu(p)
+    vin = VIN if vin is None else vin
+    a = attendu(p, vin=vin)
     # ETAPE 1 : l'inductance IDEALE devient le modele CONSTRUCTEUR Coilcraft.
     # Model1D aplati -- Rs en serie, puis trois branches en parallele :
     #     Rp seul (impedance de CRETE a la resonance, PUBLIEE au catalogue)
@@ -129,8 +131,14 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             duty = math.sqrt((VOUT ** 2 - VIN * VOUT) * 2 * L_H * FSW
                              / (rl * VIN ** 2))
         else:
-            rb = DCR + RDS * a["duty"]
-            duty = 1.0 - (VIN - a["iin"] * rb - VF) / VOUT
+            # D = 1 - (Vin - I.R_boucle) / (Vout + Vf), avec
+            # R_boucle = DCR + Ron.D. Estimation en une passe ; la charge
+            # resistive est assez amortie pour qu'une iteration de Newton
+            # suffise ensuite : dD = dVout.(1-D)/Vout.
+            d_id = 1.0 - vin / VOUT
+            rb = DCR + RDS * d_id
+            iin = p / (vin * 0.96)
+            duty = 1.0 - (vin - iin * rb) / (VOUT + VF)
     # ETAPE 3 : l'interrupteur IDEAL devient le transistor CONSTRUCTEUR.
     #
     # Variante `_L1` : trois broches, AVEC l'inductance de boitier publiee
@@ -212,7 +220,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
     if charge:
-        rl = VOUT ** 2 / p
+        rl = VOUT ** 2 / p if rl is None else rl
         bloc_sortie = "\n".join((
             "* sortie sur CHARGE : le point se stabilise seul",
             f"Rl   nout 0    {rl:.4f}",
@@ -226,7 +234,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
 * But : valider cablage, topologie, physique. PAS la fidelite.
 .param tsw={tsw:.6e} duty={duty:.6f}
 
-Vbat nin  0    DC {VIN}
+Vbat nin  0    DC {vin}
 {bloc_sortie}
 
 {bloc_l}

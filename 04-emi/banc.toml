@@ -1,0 +1,55 @@
+
+
+# ----------------------------------------------------------------
+# POINT CCM AJOUTE LE 2026-11-21 -- 40 W, Vin 20 V
+
+[point_ccm]
+description   = "40 W sur charge resistive, CCM franc (frontiere 15,3 W)"
+vin           = 20.0        # V, valeur donnee par le concepteur
+vout          = 80.001      # V, mesure, apres une iteration de Newton
+puissance     = 40.00       # W
+charge        = 160.0       # ohms, resistive -- PAS une source raide
+cout          = 2.2e-6      # F, avec ic=80
+duty          = 0.750929    # estime 0,752705, corrige en une passe
+n_etab        = 600         # periodes, soit 8,5 R.C -- VERIFIE
+rendement     = 97.55       # %
+pertes_mw     = 999.30
+i_crete       = 2.845       # A, contre Isat = 4,4 A -> 35 % de marge
+i_min         = 1.253       # A, jamais nul : CCM confirme
+vnsw_max      = 81.9        # V, 45 % de marge sur 150 V -- IDEM qu'a 8 W
+
+[point_ccm.pourquoi_une_charge]
+texte = """
+La sortie raide est legitime en DCM, ou Ipk = Vin.D.T/L ne depend pas
+de Vout. En CCM le courant vaut [Vin - (1-D).Vout] / R_boucle : une
+soustraction de grands nombres divisee par 50 mohms. Mesure : 0,4 % de
+rapport cyclique fait passer le courant de 0 a 4,77 A. Sur une charge
+resistive le meme ecart ne deplace Vout que de 1,9 V.
+Le fil du rasoir n'etait pas le CCM, c'etait la source raide.
+"""
+
+[point_ccm.verifie_et_non_suppose]
+etablissement = "600 periodes ; a 200 Vout derivait encore de 378 mV"
+cout_neutre   = "2,2 contre 10 uF : 999,30 contre 999,19 mW, soit 0,01 %"
+inductance    = "I crete 2,845 A contre Isat 4,4 A publie, 35 % de marge"
+bilan         = "ferme, porte W2 du gendarme -- VALIDE"
+
+[point_ccm.pertes_mw]
+rp_inductance = 164.86      # 16,5 % -- contre 47 % a 8 W
+mosfet        = 414.81      # 41,5 %
+diode         = 367.49      # 36,8 %
+rs_rc_ind     =  52.14      #  5,2 %
+
+[point_ccm.ce_que_ca_change]
+texte = """
+Le bilan S'INVERSE. A 8 W en DCM, 47 % des pertes sont dans le Rp de
+l'inductance, qui dissipe la sonnerie de TEMPS MORT. En CCM il n'y a
+plus de temps mort : les deux semiconducteurs passent de 51 a 78 % des
+pertes. Le composant limitant n'est pas le meme selon la puissance.
+
+Et le rendement est MEILLEUR a 40 W : 97,55 contre 96,31 %. Les pertes
+de sonnerie, quasi fixes, s'amortissent sur cinq fois plus de puissance.
+
+La surtension de drain, elle, ne bouge pas : 81,9 V aux DEUX points.
+Le calibre 150 V garde 45 % de marge sur toute la plage.
+"""
