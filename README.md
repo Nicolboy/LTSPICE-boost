@@ -89,10 +89,14 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > +90° de phase. **Un polymère faible ESR annulerait cet amortissement** :
 > c'est un élément de conception, comme les 500 mΩ d'entrée.
 >
-> **Reste ouvert** : $V_{out}$ plafonné à 80 V règle la tenue en tension —
-> les trois DPAK 150 V passent avec 40 V de budget de surtension. Mais
-> **$C_{out}$ n'est toujours pas choisi**, et le double pôle en dépend :
-> 47 µF place $f_0$ à 1,24 kHz, une décade sous le crossover.
+> **Ce qui reste ouvert**, et ce ne sont plus des choix de composant :
+>
+> - **la réponse en fréquence du plant**, dans les deux modes de part et
+>   d'autre de la frontière — les $f_z$ ci-dessus sont **calculés, pas
+>   mesurés**, et le crossover de 14 kHz reste à valider. Deux balayages AC ;
+> - **le spectre conduit** de la configuration retenue à 8 W et 50 W, à
+>   $R_g = 10\ \Omega$ ;
+> - **l'ESR réelle** du 300 µF retenu, qui porte tout l'amortissement.
 
 ![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
 
