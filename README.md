@@ -31,21 +31,31 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > pas un modèle Coilcraft), l'arbitrage « DCM seul » du §9, et le verdict
 > 200 kHz du chapitre 1.
 >
-> ### ⚠ Une contradiction ouverte, non arbitrée
+> ### Les cinq choix, remis à plat le 2026-11-21
 >
-> Le chapitre 3 §12 fixe la frontière DCM/CCM **entre 10 et 20 W**. La
-> combinaison retenue — **47 µH à 400 kHz** — la place à **7,98 W mesurés**
-> (7,11 W par la formule du §12.1, concordance à 10,9 %). Elle est donc
-> **sous la plage visée**.
+> → **[`03-architectures/frequence-mode.md`](03-architectures/frequence-mode.md)**
 >
-> Les 400 kHz viennent du §11.9 du chapitre 2, paragraphe explicitement non
-> simulé, qui les justifiait par le DCM permanent à 4,7 µH — stratégie
-> abandonnée depuis. **Le réglage a survécu à sa justification.**
+> | | retenu | critère décisif |
+> |---|---|---|
+> | fréquence | **200 kHz** | $E_{oss}f$ est une perte **fixe** : monter en fréquence coûte **0,19 pt à 50 W mais 1,54 pt à 8 W**, là où la carte vit |
+> | inductance | **`SER2211-333`, 33 µH** | $I_{sat}$ **7,1 A contre 4,4** pour le 47 µH de la même série — 52 % utilisés à 50 W contre 77 % |
+> | mode | **DCM sous 20 W, CCM au-dessus** | le CCM permanent demanderait **67 à 134 µH** : hors de la série SER2211 |
+> | transistor | **onsemi `FDT86113LZ`, SOT-223** | $C_{oss}$ 46 pF, premier des cinq à 8 W — **le calibre vaut 10× la technologie** |
+> | diode | **`V8PA22` Schottky Si 200 V** | à égalité avec le SiC 16 A, **moitié des pertes** du SiC 4 A |
 >
-> Trois leviers chiffrés, dont la `SER2211-333` 33 µH dans le boîtier déjà
-> choisi (10,1 W) : voir l'encadré du
-> [chapitre 1](01-frequence-inductance/README.md). **Décision de conception
-> attendue**, pas une correction de document.
+> **Le résultat structurel qui débloquait tout** : le choix n'a jamais été
+> entre DCM et CCM. Le CCM permanent est **hors de portée du boîtier
+> choisi**, à toute fréquence utile. L'alternative réelle est *frontière
+> dans la plage* contre *DCM partout* — et elle n'était écrite nulle part.
+>
+> **Le prototype avait raison sur la fréquence**, par intuition et avec les
+> pièces disponibles. L'instruction le confirme et ne corrige qu'une chose :
+> 47 → 33 µH, sur la marge de saturation.
+>
+> **Un seul trou réel** : le spectre conduit de cette configuration à 8 W,
+> en DCM. La pénalité de 17–20 dB du chapitre 4 a été mesurée sur un DCM qui
+> ondulait **4,5 fois plus** — soit ~26 dB d'écart avant filtrage, par mise
+> à l'échelle en $I^2$. Une simulation le tranche.
 
 ![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
 

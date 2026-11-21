@@ -50,10 +50,18 @@ croisée avec un calcul analytique.
 > | 47 µH à **284 kHz** | 10 W | bas de plage |
 > | 47 µH à **190 kHz** | 15 W | ≈ le verdict mesuré de ce chapitre |
 >
-> **Arbitrage non rendu** — c'est une décision de conception, pas une
-> correction de document. Les trois leviers déplacent aussi les pertes de
-> commutation, le volume magnétique et le spectre conduit, qu'il faut
-> reprendre ensemble.
+> **Arbitrage rendu le 2026-11-21** →
+> [`../03-architectures/frequence-mode.md`](../03-architectures/frequence-mode.md)
+> : **200 kHz, `SER2211-333` 33 µH**, frontière à 20,2 W.
+>
+> Et une nuance sur ce chapitre : son verdict 200 kHz **se trouve confirmé,
+> mais pas par lui**. Il écrit *« l'hypothèse de départ (200 kHz) est
+> confirmée »* — soit son propre point de départ, qui était l'intuition du
+> prototype monté à la main avec les pièces disponibles. Avec un switch et
+> une diode **idéaux**, ce chapitre ne pouvait pas voir les pertes de
+> commutation, c'est-à-dire la grandeur qui fixe l'optimum de fréquence.
+> Ce sont les 343 cellules du chapitre 2 §11, à $C_{oss}$ et charge de
+> grille réels, qui le justifient réellement.
 
 ## 1. Pourquoi cette étude
 

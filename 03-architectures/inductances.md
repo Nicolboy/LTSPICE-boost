@@ -663,10 +663,13 @@ L=\frac{V_{in}^2\,D\,\eta}{2\,P_\text{lim}\,f_{sw}}$$
 > systématique sur quatre fréquences.
 >
 > **La combinaison 47 µH / 400 kHz place donc la frontière sous la plage
-> visée**, d'un facteur 1,3 à 2,5 selon la borne. Trois leviers chiffrés et
-> l'arbitrage attendu : voir l'encadré du
-> [chapitre 1](../01-frequence-inductance/README.md). Le plus économe est
-> la **`SER2211-333`, 33 µH, dans le boîtier déjà choisi** — 10,1 W.
+> visée**, d'un facteur 1,3 à 2,5 selon la borne.
+>
+> **Arbitrage rendu le 2026-11-21** → [`frequence-mode.md`](frequence-mode.md)
+> : **200 kHz avec la `SER2211-333` 33 µH**, frontière à 20,2 W, et
+> $I_{sat}$ utilisé à 52 % au lieu de 77 %. Ce document établit aussi que
+> le **CCM permanent est hors de portée du boîtier** — il demanderait 67 à
+> 134 µH — ce qui reformule l'alternative posée par le présent §12.
 >
 > Noter que les 400 kHz viennent du §11.9 du chapitre 2, paragraphe
 > explicitement non simulé, qui les justifiait par le DCM permanent à
