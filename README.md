@@ -40,7 +40,7 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > | fréquence | **200 kHz** | $E_{oss}f$ est une perte **fixe** : monter en fréquence coûte **0,19 pt à 50 W mais 1,54 pt à 8 W**, là où la carte vit |
 > | inductance | **`XAL1510-223`, 22 µH** | $I_{sat}$ utilisé à **23 %** contre **79 %** pour le 47 µH en stock, et **48 % de surface en moins** |
 > | mode | **transition assumée** — bande **13,5 → 47,4 W** selon $V_{in}$ | les **deux** modes purs sont hors de portée : le CCM demande 67–134 µH, le DCM est marginal de 1 % au coin bas |
-> | transistor | **un des trois 150 V DPAK** — non tranché | $C_{oss}$ à extraire : à charge partielle il décide, et un 7 mΩ est arrivé **dernier** derrière un 75 mΩ |
+> | transistor | **onsemi `FDD770N15A`**, 150 V DPAK | relevé sur fiche : les trois FOM sont dans un mouchoir (17–21 nJ·Ω), donc **seul le calibre décide** — et à 5–10 W l'`IPD200N15N3` est **5 à 10× trop grosse** |
 > | diode | **`V8PA22` Schottky Si 200 V** | **2,0× de marge** même à $V_{out}$ = 100 V, et à égalité de pertes avec le SiC 16 A |
 >
 > **Le résultat structurel qui débloquait tout** : le choix n'a jamais été
@@ -59,15 +59,27 @@ depuis les scripts, aucun résultat n'est recopié à la main.
 > 3,5**. Annoncer « transition à 15 W » n'a de sens qu'à une seule tension
 > d'entrée.
 >
-> **Deux décisions d'architecture restent ouvertes**, et elles ne sont pas
-> des choix de composant :
+> ### La régulation tranche le 22/33 µH — et la frontière est une surface
 >
-> 1. **$V_{out}$ plafonné à 80 V, ou libre jusqu'à 100 V ?** À 100 V, un
->    boîtier 150 V ne laisse que **20 V** de budget de surtension sous la
->    règle des 80 % — il faudrait du 200 V. À 80 V le budget est de 40 V,
->    confortable. Cela remonte au partage de tension entre les deux étages.
-> 2. **22 µH ou 33 µH ?** 3,5 dB d'ondulation contre 0,05 pt de rendement.
->    Un spectre conduit le tranche.
+> → **[`03-architectures/frontiere-3d.html`](03-architectures/frontiere-3d.html)**
+> — $P_{lim}(V_{in}, L)$ à 80 V, 168 points, mailles à éviter cerclées.
+>
+> Le plant est **discontinu** à la traversée : second ordre avec zéro à
+> droite en CCM, premier ordre en DCM. Une boucle à compensation fixe y
+> **chasse**, et le cycle limite tombe **sous 20 kHz — en plein audible**.
+>
+> Donc il faut éloigner la frontière de la zone d'emploi. À 12 V, **33 µH
+> la place à 9,0 W, dans la fourchette privilégiée** ; 22 µH la laisse à
+> 13,5 W, au-dessus à toute tension. **Le 22 µH est retenu**, et c'est la
+> régulation qui l'a décidé, pas les pertes.
+>
+> Le zéro à droite impose un crossover sous **14 kHz** (pire cas 41,7 kHz
+> à 12 V / 25 W) — tenable dans les deux modes sans rien commuter.
+>
+> **Reste ouvert** : $V_{out}$ plafonné à 80 V règle la tenue en tension —
+> les trois DPAK 150 V passent avec 40 V de budget de surtension. Mais
+> **$C_{out}$ n'est toujours pas choisi**, et le double pôle en dépend :
+> 47 µF place $f_0$ à 1,24 kHz, une décade sous le crossover.
 
 ![Mode différentiel conduit — effet du choix d'inductance](04-emi/illustrations/cin_comparaison.png)
 

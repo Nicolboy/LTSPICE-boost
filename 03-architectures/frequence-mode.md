@@ -431,6 +431,170 @@ thermiquement intenable au chapitre 3 §3.
 
 ---
 
+## 10. Les zéros, et les deux plants de régulation
+
+C'est la contrainte que le concepteur a retrouvée, et elle décide la
+valeur d'inductance autant que les pertes.
+
+### 10.1 Deux plants, pas un plant qui se déforme
+
+En **CCM**, le boost présente au régulateur :
+
+$$\Large G_{vd}(s)=\frac{V_{out}}{D'}\cdot
+\frac{1-s/\omega_z}{1+s/(Q\omega_0)+s^2/\omega_0^2}
+\qquad \omega_z=\frac{D'^2R}{L},\quad \omega_0=\frac{D'}{\sqrt{LC}}$$
+
+Un **second ordre**, et surtout un **zéro dans le demi-plan droit**.
+Physiquement : pour délivrer plus de courant de sortie, il faut d'abord
+allonger le temps de conduction, donc *fermer* la diode plus longtemps —
+la sortie **baisse avant de monter**. Aucune compensation ne corrige ça ;
+on ne peut que croiser bien en dessous.
+
+En **DCM**, le courant repart de zéro à chaque cycle : l'inductance cesse
+d'être une variable d'état. L'ordre **tombe à un**, et le zéro à droite
+remonte d'environ une décade. Le plant devient docile.
+
+**Ce ne sont pas deux points d'un même plant.** Ce sont deux fonctions de
+transfert d'ordres différents, et le passage de l'une à l'autre est
+**discontinu**. Un compensateur fixe voit deux objets ; au voisinage du
+seuil, le gain de boucle effectif saute d'un cycle à l'autre et la boucle
+**chasse** — un cycle limite qui alterne entre les deux modes.
+
+### 10.2 Où tombe ce cycle limite — et la correction
+
+Un cycle limite de ce type se place **dans la bande de la boucle**, soit
+$f_{sw}/10$ à $f_{sw}/20$, et ses sous-harmoniques en dessous. À 200 kHz
+cela donne **10 à 20 kHz, puis plus bas**.
+
+> **Correction** : la bande audible est **sous 20 kHz**, pas 20–100 kHz.
+> Le cycle limite y tombe donc **en plein**, et l'inductance chante. C'est
+> plus gênant que ce que la mémoire du concepteur en gardait, pas moins.
+
+### 10.3 Le zéro à droite, chiffré sur l'enveloppe réelle
+
+$f_z = D'^2R/(2\pi L)$ avec $D' = V_{in}/V_{out}$ et $R = V_{out}^2/P$ —
+donc $f_z$ **descend quand la charge monte** et quand $V_{in}$ baisse.
+À 22 µH :
+
+| $V_{in}$ | P | mode | $f_z$ | crossover max ($f_z/3$) |
+|---|---|---|---|---|
+| **12 V** | **25 W** | CCM | **41,7 kHz** | **13,9 kHz** ← le pire |
+| 19 V | 50 W | CCM | 52,2 kHz | 17,4 kHz |
+| 20 V | 50 W | CCM | 57,9 kHz | 19,3 kHz |
+| 25 V | 50 W | CCM | 90,4 kHz | 30,1 kHz |
+| 20 V | 8 W | **DCM** | 361,7 kHz | 120,6 kHz |
+
+**Le pire cas est le coin bas en pleine charge, pas le point nominal** —
+41,7 kHz à 12 V / 25 W. Et en DCM au point d'emploi, le zéro est à
+361,7 kHz, **au-delà de la fréquence de découpage** : il ne contraint
+rien.
+
+**Conclusion de dimensionnement : croiser sous ~14 kHz**, ce qui tient
+dans les deux modes sans rien commuter. Une alimentation de filament n'a
+aucun besoin d'une réponse transitoire plus rapide.
+
+### 10.4 Et il manque une pièce : $C_{out}$ n'est pas choisi
+
+$f_0 = D'/(2\pi\sqrt{LC})$ — **le double pôle dépend de la capacité de
+sortie, qui n'est pas arrêtée**. Le chapitre 1 l'a ramenée à 2,2 µF pour
+la simulation et a explicitement différé la vraie valeur.
+
+| $C_{out}$ | $f_0$ à 12 V | à 20 V | à 25 V |
+|---|---|---|---|
+| 10 µF | 1,61 kHz | 2,68 kHz | 3,35 kHz |
+| **47 µF** | **0,74 kHz** | **1,24 kHz** | 1,55 kHz |
+| 100 µF | 0,51 kHz | 0,85 kHz | 1,06 kHz |
+
+Il faut $f_0 \ll f_c \ll f_z$. Avec $f_c \approx 14$ kHz, **47 µF suffit**
+— une décade de marge sous le crossover. **À trancher**, et c'est le seul
+chaînon manquant du plant.
+
+### 10.5 Ce qui en découle pour l'inductance
+
+Si la traversée est le point sensible, il faut **éloigner la frontière de
+la zone d'emploi**. À 200 kHz, fourchette privilégiée 5–10 W :
+
+| $V_{in}$ | 22 µH | 33 µH |
+|---|---|---|
+| 12 V | 13,5 W | **9,0 W ← dans la zone** |
+| 16 V | 22,6 W | 15,0 W |
+| 20 V | 33,1 W | 22,0 W |
+
+**C'est l'argument qui tranche entre les deux**, et il va dans le sens de
+la fenêtre 10–22 µH proposée par le concepteur : avec 33 µH la frontière
+tombe à 9,0 W au coin bas, en plein dans la fourchette privilégiée. Avec
+22 µH elle reste au-dessus à toute tension d'entrée.
+
+> **Surface interactive : [`frontiere-3d.html`](frontiere-3d.html)** —
+> $P_{lim}(V_{in}, L)$ à $V_{out}$ = 80 V, quatre fréquences, mailles
+> à éviter cerclées de rouge. 168 points, analytiques, recoupés sur le
+> tableau **mesuré** du chapitre 1 §5.
+>
+> Le décompte des mailles à risque y est parlant : **1 sur 42 à 150 kHz,
+> 3 à 200 kHz, 6 à 300 kHz, 10 à 400 kHz.** Monter en fréquence ne coûte
+> pas seulement du rendement à charge partielle — ça rapproche
+> mécaniquement la frontière de la zone d'emploi.
+
+### 10.6 Ce qui reste à vérifier
+
+Les formes ci-dessus sont les modèles canoniques du boost (Erickson,
+ch. 7 et 11) ; **les valeurs de $f_z$ sont calculées, pas mesurées**. À
+confirmer par une réponse en fréquence du plant dans les deux modes, de
+part et d'autre de la frontière, pour chiffrer l'écart réel et valider le
+crossover de 14 kHz. C'est le travail qui manque, et il ne demande pas de
+campagne : deux balayages AC.
+
+---
+
+## 11. Le transistor — relevé sur fiche, et le calibre décide
+
+FOM $= E_{oss}\!\cdot\!R_{ds}$, la constante de technologie.
+$E_{oss} = \tfrac12 C_{oss(er)}V^2$.
+
+| pièce | $R_{ds}$ typ | $C_{oss}$(75 V) | $C_{oss(er)}$ | $E_{oss}$(80 V) | $Q_g$ | **FOM** |
+|---|---|---|---|---|---|---|
+| **FDD770N15A** | 61 mΩ | 64 pF | **113 pF** *(publié)* | 342 nJ | 8,4 nC | 20,9 |
+| FDD86252 | 41 mΩ | 78 pF | 138 pF *(dérivé)* | 417 nJ | 11,3 nC | 17,1 |
+| IPD200N15N3 | **16 mΩ** | **214 pF** | 378 pF *(dérivé)* | **1143 nJ** | 23 nC | 18,3 |
+| *FDT86113LZ (ch. 2, SOT-223)* | *75 mΩ* | — | — | *176 nJ* | — | ***13,2*** |
+
+> **Provenance.** Seul le `FDD770N15A` publie $C_{oss(er)}$. Comme il
+> publie **aussi** $C_{oss}$ au même point, leur rapport **1,77** donne
+> l'exposant réel de la famille, $C_{oss}\propto V^{-0{,}87}$ — et non le
+> $V^{-0,5}$ qu'on suppose souvent. Ce rapport mesuré est appliqué aux
+> deux autres, **et c'est marqué *dérivé***. Un $C_{oss(er)}$ constructeur
+> ou l'intégration de la courbe le remplacerait ; l'ordre de grandeur ne
+> bougera pas.
+
+**Les trois FOM sont dans un mouchoir — 17 à 21 nJ·Ω.** Même génération
+technologique. **Donc tout se joue sur la taille de puce**, et
+$R^{*}=\sqrt{\mathrm{FOM}\cdot f_{sw}}/I_{rms}$ la donne :
+
+| P | $I_{rms}$ | FDD770N15A | FDD86252 | IPD200N15N3 |
+|---|---|---|---|---|
+| **5 W** | 0,48 A | **0,5×** | 0,3× | **0,1×** |
+| **8 W** | 0,68 A | **0,6×** | 0,5× | **0,2×** |
+| 10 W | 0,80 A | **0,8×** | 0,6× | 0,2× |
+| 25 W | 1,60 A | 1,5× | **1,1×** | 0,4× |
+| 50 W | 2,76 A | 2,6× | 1,9× | **0,7×** |
+
+*(rapport $R_{ds}$ réel / $R^{*}$ optimal ; 1,0 = juste, < 1 = puce trop
+grosse, le $C_{oss}$ domine)*
+
+**Sur la fourchette privilégiée 5–10 W, l'`IPD200N15N3` est 5 à 10 fois
+trop grosse.** C'est exactement le piège du SuperSO8 à 7 mΩ, arrivé
+**dernier des cinq** à 8 W au chapitre 2.
+
+**Retenu : `FDD770N15A`** — le seul des trois dont le calibre approche
+l'optimum à 5–10 W, et le seul dont le $C_{oss(er)}$ est publié.
+
+> **Réserve honnête** : le `FDT86113LZ` du chapitre 2 reste meilleur sur
+> les deux tableaux — FOM 13,2 contre 20,9 (**−37 %**) et 75 mΩ pour un
+> optimum de 95 mΩ à 8 W. Il n'est pas dans le jeu téléchargé, et sa
+> tenue en tension est **à vérifier** avant de le remettre en lice.
+
+---
+
 ## Reproduire
 
 Les chiffres de frontière, d'ondulation et de courant crête de ce document

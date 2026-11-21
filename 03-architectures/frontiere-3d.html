@@ -1,0 +1,266 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frontière DCM/CCM — surface 3D interactive</title>
+<style>
+:root{--bg:#11141a;--pan:#171b23;--bord:#2b3240;--txt:#e6e9ef;--txt2:#9aa4b5;
+      --ko:#ff6b6b;--ok:#3ddc84}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+     font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:1.4rem 1.1rem 3rem}
+h1{font-size:1.45rem;margin:.2rem 0 .3rem;font-weight:650}
+.sous{color:var(--txt2);font-size:.93rem;margin:0 0 1.1rem}
+.barre{display:flex;flex-wrap:wrap;gap:.45rem;margin:.7rem 0;align-items:center}
+.barre b{font-size:.82rem;color:var(--txt2);margin-right:.2rem;font-weight:600}
+button{background:var(--pan);color:var(--txt);border:1px solid var(--bord);
+       border-radius:7px;padding:.44rem .8rem;cursor:pointer;font-size:.88rem}
+button:hover{border-color:#49546a}
+button.on{background:#223049;border-color:#4d7fc1;color:#cfe2ff}
+#wrap{position:relative;border:1px solid var(--bord);border-radius:11px;
+      background:var(--pan);overflow:hidden}
+canvas{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
+canvas:active{cursor:grabbing}
+#bulle{position:absolute;pointer-events:none;display:none;z-index:5;
+  background:#0d1016;border:1px solid var(--bord);border-radius:8px;
+  padding:.55rem .7rem;font-size:.82rem;line-height:1.5;max-width:280px;
+  box-shadow:0 8px 26px #0009}
+#bulle b{color:#cfe2ff}
+.note{color:var(--txt2);font-size:.85rem;margin:.8rem 0 0}
+.aide{background:#141821;border-left:3px solid #4d7fc1;border-radius:0 7px 7px 0;
+      padding:.65rem .85rem;margin:1rem 0;font-size:.87rem;color:var(--txt2)}
+.aide.rouge{border-left-color:var(--ko)}
+table{border-collapse:collapse;margin-top:1rem;font-size:.85rem;width:100%}
+th,td{border:1px solid var(--bord);padding:.32rem .55rem;text-align:right}
+th{color:var(--txt2);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+.ko{color:var(--ko);font-weight:600}
+</style></head><body><main>
+<h1>Frontière DCM/CCM — surface <i>P</i>(V<sub>in</sub>, L)</h1>
+<p class="sous">V<sub>out</sub> = 80 V · η = 0,97 ·
+<b>la frontière dépend de V<sub>in</sub> au carré</b> : sur 12–25 V elle se
+déplace d'un facteur 3,51, à L et f<sub>sw</sub> fixes · glisser pour
+tourner, molette pour zoomer</p>
+
+<div class="barre"><b>f<sub>sw</sub></b><span id="bF"></span></div>
+<div class="barre"><b>grandeur</b><span id="bG"></span></div>
+
+<div id="wrap">
+  <canvas id="c" width="1140" height="660"></canvas>
+  <div id="bulle"></div>
+</div>
+<p class="note" id="leg"></p>
+
+<div class="aide rouge">
+<b>Les mailles cerclées de rouge sont celles à éviter.</b> Leur frontière
+tombe dans la fourchette privilégiée <b>5 à 10 W</b> — donc le convertisseur
+travaille <i>sur</i> la transition à son point d'emploi. Le plant de
+régulation y est discontinu : zéro à droite qui bondit, ordre qui change,
+gain continu qui saute. Une boucle à compensation fixe y chasse, et le cycle
+limite tombe dans la bande audible.
+</div>
+
+<div class="aide" id="lecture"></div>
+<div id="tab"></div>
+</main>
+<script>
+const VIN=[12, 14, 16, 18, 20, 22, 25], LS=[10, 12, 15, 22, 33, 47], FSW=[150, 200, 300, 400], NOTES={"10": "XAL1510-103 — modèle SPICE complet publié", "12": "SER2211-123 — en stock", "15": "XAL1510-153", "22": "XAL1510-223 — retenu", "33": "XAL1510-333 — fiche téléchargée", "47": "SER2211-473 — en stock, Isat 4,4 A seulement"}, D={"150": [[[39.58, 4.947, 3.057, 0], [52.28, 6.535, 3.012, 0], [66.22, 8.277, 2.966, 0], [81.19, 10.149, 2.919, 0], [97.0, 12.125, 2.872, 0], [113.46, 14.182, 2.824, 0], [138.93, 17.367, 2.75, 0]], [[32.98, 4.122, 2.791, 0], [43.57, 5.446, 2.75, 0], [55.18, 6.898, 2.708, 0], [67.66, 8.457, 2.665, 0], [80.83, 10.104, 2.622, 0], [94.55, 11.819, 2.578, 0], [115.78, 14.472, 2.51, 0]], [[26.38, 3.298, 2.496, 0], [34.86, 4.357, 2.459, 0], [44.15, 5.518, 2.422, 0], [54.13, 6.766, 2.384, 0], [64.67, 8.083, 2.345, 0], [75.64, 9.455, 2.305, 0], [92.62, 11.578, 2.245, 0]], [[17.99, 2.249, 2.061, 0], [23.77, 2.971, 2.031, 0], [30.1, 3.762, 2.0, 0], [36.9, 4.613, 1.968, 0], [44.09, 5.511, 1.936, 0], [51.57, 6.446, 1.904, 0], [63.15, 7.894, 1.854, 0]], [[11.99, 1.499, 1.683, 0], [15.84, 1.98, 1.658, 0], [20.07, 2.508, 1.633, 0], [24.6, 3.075, 1.607, 0], [29.39, 3.674, 1.581, 0], [34.38, 4.298, 1.554, 0], [42.1, 5.263, 1.514, 0]], [[8.42, 1.053, 1.41, 1], [11.12, 1.391, 1.389, 0], [14.09, 1.761, 1.368, 0], [17.27, 2.159, 1.347, 0], [20.64, 2.58, 1.325, 0], [24.14, 3.017, 1.302, 0], [29.56, 3.695, 1.268, 0]]], "200": [[[29.68, 3.71, 2.648, 0], [39.21, 4.902, 2.608, 0], [49.66, 6.208, 2.569, 0], [60.89, 7.611, 2.528, 0], [72.75, 9.094, 2.487, 0], [85.09, 10.637, 2.445, 0], [104.2, 13.025, 2.381, 0]], [[24.73, 3.092, 2.417, 0], [32.68, 4.085, 2.381, 0], [41.39, 5.173, 2.345, 0], [50.74, 6.343, 2.308, 0], [60.62, 7.578, 2.27, 0], [70.91, 8.864, 2.232, 0], [86.83, 10.854, 2.174, 0]], [[19.79, 2.474, 2.162, 0], [26.14, 3.268, 2.13, 0], [33.11, 4.139, 2.097, 0], [40.59, 5.074, 2.064, 0], [48.5, 6.063, 2.031, 0], [56.73, 7.091, 1.997, 0], [69.47, 8.683, 1.944, 0]], [[13.49, 1.686, 1.785, 0], [17.82, 2.228, 1.759, 0], [22.57, 2.822, 1.732, 0], [27.68, 3.46, 1.705, 0], [33.07, 4.134, 1.677, 0], [38.68, 4.835, 1.649, 0], [47.36, 5.92, 1.605, 0]], [[8.99, 1.124, 1.458, 1], [11.88, 1.485, 1.436, 0], [15.05, 1.881, 1.414, 0], [18.45, 2.307, 1.392, 0], [22.05, 2.756, 1.369, 0], [25.79, 3.223, 1.346, 0], [31.58, 3.947, 1.311, 0]], [[6.32, 0.789, 1.085, 1], [8.34, 1.043, 1.203, 1], [10.57, 1.321, 1.185, 0], [12.96, 1.619, 1.166, 0], [15.48, 1.935, 1.147, 0], [18.1, 2.263, 1.128, 0], [22.17, 2.771, 1.098, 0]]], "300": [[[19.79, 2.474, 2.162, 0], [26.14, 3.268, 2.13, 0], [33.11, 4.139, 2.097, 0], [40.59, 5.074, 2.064, 0], [48.5, 6.063, 2.031, 0], [56.73, 7.091, 1.997, 0], [69.47, 8.683, 1.944, 0]], [[16.49, 2.061, 1.973, 0], [21.78, 2.723, 1.944, 0], [27.59, 3.449, 1.915, 0], [33.83, 4.229, 1.884, 0], [40.42, 5.052, 1.854, 0], [47.27, 5.909, 1.823, 0], [57.89, 7.236, 1.775, 0]], [[13.19, 1.649, 1.765, 0], [17.43, 2.178, 1.739, 0], [22.07, 2.759, 1.712, 0], [27.06, 3.383, 1.685, 0], [32.33, 4.042, 1.658, 0], [37.82, 4.727, 1.63, 0], [46.31, 5.789, 1.587, 0]], [[8.99, 1.124, 1.458, 1], [11.88, 1.485, 1.436, 0], [15.05, 1.881, 1.414, 0], [18.45, 2.307, 1.392, 0], [22.05, 2.756, 1.369, 0], [25.79, 3.223, 1.346, 0], [31.58, 3.947, 1.311, 0]], [[6.0, 0.75, 1.03, 1], [7.92, 0.99, 1.167, 1], [10.03, 1.254, 1.155, 0], [12.3, 1.538, 1.136, 0], [14.7, 1.837, 1.118, 0], [17.19, 2.149, 1.099, 0], [21.05, 2.631, 1.07, 0]], [[4.21, 0.526, 0.723, 0], [5.56, 0.695, 0.819, 1], [7.04, 0.881, 0.908, 1], [8.64, 1.08, 0.952, 1], [10.32, 1.29, 0.937, 0], [12.07, 1.509, 0.921, 0], [14.78, 1.848, 0.897, 0]]], "400": [[[14.84, 1.855, 1.872, 0], [19.61, 2.451, 1.844, 0], [24.83, 3.104, 1.816, 0], [30.45, 3.806, 1.788, 0], [36.38, 4.547, 1.759, 0], [42.55, 5.318, 1.729, 0], [52.1, 6.512, 1.684, 0]], [[12.37, 1.546, 1.709, 0], [16.34, 2.042, 1.684, 0], [20.69, 2.587, 1.658, 0], [25.37, 3.171, 1.632, 0], [30.31, 3.789, 1.605, 0], [35.46, 4.432, 1.578, 0], [43.42, 5.427, 1.537, 0]], [[9.89, 1.237, 1.529, 1], [13.07, 1.634, 1.506, 0], [16.55, 2.069, 1.483, 0], [20.3, 2.537, 1.46, 0], [24.25, 3.031, 1.436, 0], [28.36, 3.546, 1.412, 0], [34.73, 4.342, 1.375, 0]], [[6.75, 0.843, 1.159, 1], [8.91, 1.114, 1.244, 1], [11.29, 1.411, 1.225, 0], [13.84, 1.73, 1.205, 0], [16.53, 2.067, 1.186, 0], [19.34, 2.417, 1.166, 0], [23.68, 2.96, 1.135, 0]], [[4.5, 0.562, 0.773, 0], [5.94, 0.743, 0.875, 1], [7.52, 0.941, 0.97, 1], [9.23, 1.153, 0.984, 1], [11.02, 1.378, 0.968, 0], [12.89, 1.612, 0.952, 0], [15.79, 1.973, 0.927, 0]], [[3.16, 0.395, 0.543, 0], [4.17, 0.521, 0.614, 0], [5.28, 0.66, 0.681, 1], [6.48, 0.81, 0.742, 1], [7.74, 0.967, 0.798, 1], [9.05, 1.132, 0.798, 1], [11.09, 1.386, 0.777, 0]]]};
+const GR=[["Frontière DCM/CCM (W)","W",0],
+          ["Marge au point d'emploi — P_lim / 8 W","×",1],
+          ["Ondulation à 8 W (A)","A",2]];
+const cv=document.getElementById("c"), cx=cv.getContext("2d");
+const W=cv.width,H=cv.height,CX=W/2+10,CY=H/2+46,S=Math.min(W,H)*0.60;
+let az=-0.72, el=0.50, zoom=1, fi=1, ig=0, pts=[];
+
+function proj(x,y,z){
+  const X=(x-.5)*1.9, Y=(y-.5)*1.9, Z=(z-.5)*1.25;
+  const ca=Math.cos(az), sa=Math.sin(az);
+  const x1=X*ca-Y*sa, y1=X*sa+Y*ca;
+  const ce=Math.cos(el), se=Math.sin(el);
+  const y2=y1*ce-Z*se, z2=y1*se+Z*ce;
+  const p=1/(1+y2*0.16);
+  return [CX+x1*S*zoom*p, CY-z2*S*zoom*p, y2];
+}
+const gx=j=>j/(VIN.length-1), gy=i=>i/(LS.length-1);
+
+function bornes(m){
+  let lo=Infinity,hi=-Infinity;
+  for(const r of m) for(const c of r){ const v=c[GR[ig][2]];
+    if(v<lo)lo=v; if(v>hi)hi=v; }
+  if(hi-lo<1e-9) hi=lo+1;
+  return [lo,hi];
+}
+function coul(u,ecr){
+  if(ecr) return "rgba(255,107,107,.30)";
+  const h=215-150*Math.min(1,Math.max(0,u));
+  return "hsla("+h+",62%,52%,.80)";
+}
+
+function dessine(){
+  const m=D[FSW[fi]], [lo,hi]=bornes(m), q=GR[ig][2];
+  const z=v=>(v-lo)/(hi-lo);
+  cx.clearRect(0,0,W,H);
+
+  /* socle */
+  cx.strokeStyle="#2b3240"; cx.lineWidth=1;
+  for(let i=0;i<LS.length;i++){
+    const a=proj(0,gy(i),0), b=proj(1,gy(i),0);
+    cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke();
+  }
+  for(let j=0;j<VIN.length;j++){
+    const a=proj(gx(j),0,0), b=proj(gx(j),1,0);
+    cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke();
+  }
+  cx.fillStyle="#9aa4b5"; cx.font="12px system-ui"; cx.textAlign="center";
+  for(let j=0;j<VIN.length;j++){ const t=proj(gx(j),-0.10,0);
+    cx.fillText(VIN[j]+" V",t[0],t[1]+4); }
+  cx.textAlign="right";
+  for(let i=0;i<LS.length;i++){ const t=proj(-0.08,gy(i),0);
+    cx.fillText(LS[i]+" µH",t[0],t[1]+4); }
+
+  /* AXE VERTICAL au coin le plus ELOIGNE : ailleurs il passerait devant le
+     relief. Recalcule a chaque rotation. Sans graduations en Z, la couleur
+     seule ne donne pas une valeur -- le relief n'est pas mesurable. */
+  let coin=null;
+  for(const [x,y] of [[0,0],[1,0],[1,1],[0,1]]){
+    const p=proj(x,y,0); if(!coin||p[2]>coin.p[2]) coin={x,y,p};
+  }
+  const haut=proj(coin.x,coin.y,1);
+  cx.strokeStyle="#49546a"; cx.lineWidth=1.3;
+  cx.beginPath(); cx.moveTo(coin.p[0],coin.p[1]); cx.lineTo(haut[0],haut[1]);
+  cx.stroke();
+  const vers=coin.x<0.5?-1:1;
+  cx.textAlign=vers<0?"right":"left";
+  for(let k=0;k<=4;k++){
+    const u=k/4, v=lo+(hi-lo)*u, p=proj(coin.x,coin.y,u);
+    cx.strokeStyle="#49546a"; cx.lineWidth=1;
+    cx.beginPath(); cx.moveTo(p[0],p[1]); cx.lineTo(p[0]+vers*7,p[1]); cx.stroke();
+    cx.fillStyle="#9aa4b5"; cx.font="12px system-ui";
+    cx.fillText(v.toFixed(hi<3?2:(hi<30?1:0)), p[0]+vers*11, p[1]+4);
+    if(k>0&&k<5){
+      const o=proj(coin.x, coin.x===coin.y?1-coin.y:coin.y, u);
+      cx.strokeStyle="rgba(73,84,106,.35)";
+      cx.beginPath(); cx.moveTo(p[0],p[1]); cx.lineTo(o[0],o[1]); cx.stroke();
+    }
+  }
+  const mil=proj(coin.x,coin.y,0.5);
+  cx.save(); cx.translate(mil[0]+vers*54,mil[1]); cx.rotate(-Math.PI/2);
+  cx.textAlign="center"; cx.fillStyle="#e6e9ef"; cx.font="13px system-ui";
+  cx.fillText(GR[ig][0],0,0); cx.restore();
+
+  /* DALLE 5-10 W, uniquement sur la grandeur « frontiere » : elle montre ou
+     la surface traverse la zone d'emploi. */
+  if(q===0 && lo<P_HAUT && hi>P_BAS){
+    for(const pw of [P_BAS,P_HAUT]){
+      if(pw<lo||pw>hi) continue;
+      const u=z(pw);
+      cx.strokeStyle="rgba(255,107,107,.55)"; cx.lineWidth=1.2;
+      cx.setLineDash([5,4]); cx.beginPath();
+      const cs=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>proj(x,y,u));
+      cx.moveTo(cs[0][0],cs[0][1]);
+      for(let k=1;k<4;k++) cx.lineTo(cs[k][0],cs[k][1]);
+      cx.closePath(); cx.stroke(); cx.setLineDash([]);
+    }
+  }
+
+  /* faces triees du plus loin au plus proche */
+  const faces=[];
+  for(let i=0;i<LS.length-1;i++) for(let j=0;j<VIN.length-1;j++){
+    const qd=[[i,j],[i,j+1],[i+1,j+1],[i+1,j]];
+    const pr=qd.map(([a,b])=>proj(gx(b),gy(a),z(m[a][b][q])));
+    const v=qd.reduce((s,[a,b])=>s+m[a][b][q],0)/4;
+    faces.push({pr, prof:pr.reduce((s,p)=>s+p[2],0)/4, v,
+                ecr:qd.some(([a,b])=>m[a][b][3])});
+  }
+  faces.sort((a,b)=>b.prof-a.prof);
+  for(const f of faces){
+    cx.beginPath(); cx.moveTo(f.pr[0][0],f.pr[0][1]);
+    for(let k=1;k<4;k++) cx.lineTo(f.pr[k][0],f.pr[k][1]);
+    cx.closePath();
+    cx.fillStyle=coul((f.v-lo)/(hi-lo), f.ecr&&q===0); cx.fill();
+    cx.strokeStyle=f.ecr&&q===0?"rgba(255,107,107,.85)":"rgba(10,13,18,.55)";
+    cx.lineWidth=f.ecr&&q===0?1.6:1; cx.stroke();
+  }
+
+  pts=[];
+  for(let i=0;i<LS.length;i++) for(let j=0;j<VIN.length;j++){
+    const c=m[i][j], p=proj(gx(j),gy(i),z(c[q]));
+    pts.push({x:p[0],y:p[1],i,j,c});
+    cx.beginPath(); cx.arc(p[0],p[1],c[3]&&q===0?4.2:2.8,0,7);
+    cx.fillStyle=c[3]&&q===0?"#ff6b6b":"#0d1016";
+    cx.strokeStyle=c[3]&&q===0?"#ff6b6b":"#cfe2ff";
+    cx.lineWidth=1.2; cx.fill(); cx.stroke();
+  }
+  document.getElementById("leg").textContent=
+    GR[ig][0]+" — de "+lo.toFixed(2)+" à "+hi.toFixed(2)+" "+GR[ig][1]
+    +" · f_sw = "+FSW[fi]+" kHz · V_out = 80 V";
+  tableau(m);
+}
+
+function tableau(m){
+  let h="<table><tr><th>L</th>";
+  for(const v of VIN) h+="<th>"+v+" V</th>";
+  h+="</tr>";
+  for(let i=0;i<LS.length;i++){
+    h+="<tr><td>"+LS[i]+" µH</td>";
+    for(let j=0;j<VIN.length;j++){
+      const c=m[i][j];
+      h+="<td"+(c[3]?' class="ko"':"")+">"+c[0].toFixed(1)+"</td>";
+    }
+    h+="</tr>";
+  }
+  h+="</table>";
+  document.getElementById("tab").innerHTML=h;
+  document.getElementById("lecture").innerHTML=
+    "<b>Lecture.</b> Le tableau donne la frontière en watts. En rouge, les "
+    +"cases où elle tombe entre 5 et 10 W. Plus l'inductance est grande, plus "
+    +"la frontière descend — et plus elle risque de croiser la zone d'emploi. "
+    +"Plus V<sub>in</sub> monte, plus elle remonte, en V<sub>in</sub>².";
+}
+
+function barres(){
+  const bf=document.getElementById("bF"), bg=document.getElementById("bG");
+  bf.innerHTML=""; bg.innerHTML="";
+  FSW.forEach((f,k)=>{ const b=document.createElement("button");
+    b.textContent=f+" kHz"; b.className=k===fi?"on":"";
+    b.onclick=()=>{fi=k;barres();dessine();}; bf.appendChild(b); });
+  GR.forEach((g,k)=>{ const b=document.createElement("button");
+    b.textContent=g[0].split("—")[0].trim(); b.className=k===ig?"on":"";
+    b.onclick=()=>{ig=k;barres();dessine();}; bg.appendChild(b); });
+}
+
+const bulle=document.getElementById("bulle");
+cv.addEventListener("mousemove",e=>{
+  const r=cv.getBoundingClientRect(), sx=cv.width/r.width;
+  const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sx;
+  let best=null,bd=1e9;
+  for(const p of pts){ const d=(p.x-mx)**2+(p.y-my)**2;
+    if(d<bd){bd=d;best=p;} }
+  if(best&&bd<420){
+    const c=best.c, L=LS[best.i], V=VIN[best.j];
+    bulle.innerHTML="<b>"+L+" µH · V<sub>in</sub> "+V+" V · "+FSW[fi]
+      +" kHz</b><br>frontière <b>"+c[0].toFixed(2)+" W</b><br>marge au point "
+      +"d'emploi (8 W) : ×"+c[1].toFixed(2)+"<br>ondulation à 8 W : "
+      +c[2].toFixed(2)+" A"
+      +(c[3]?"<br><span style='color:#ff6b6b'><b>frontière DANS la zone "
+        +"5–10 W</b> — la boucle y chasse</span>":"")
+      +(NOTES[L]?"<br><span style='color:#9aa4b5'>"+NOTES[L]+"</span>":"");
+    bulle.style.display="block";
+    bulle.style.left=Math.min(r.width-290,(best.x/sx)+14)+"px";
+    bulle.style.top=((best.y/sx)-10)+"px";
+  } else bulle.style.display="none";
+});
+cv.addEventListener("mouseleave",()=>bulle.style.display="none");
+let drag=null;
+cv.addEventListener("pointerdown",e=>{drag=[e.clientX,e.clientY,az,el];
+  cv.setPointerCapture(e.pointerId);});
+cv.addEventListener("pointerup",()=>drag=null);
+cv.addEventListener("pointermove",e=>{ if(!drag) return;
+  az=drag[2]+(e.clientX-drag[0])*0.009;
+  el=Math.max(-0.2,Math.min(1.35,drag[3]+(e.clientY-drag[1])*0.006));
+  dessine(); });
+cv.addEventListener("wheel",e=>{e.preventDefault();
+  zoom=Math.max(.55,Math.min(2.4,zoom*(e.deltaY<0?1.1:0.91))); dessine();},
+  {passive:false});
+const P_BAS=5.0, P_HAUT=10.0;
+barres(); dessine();
+</script></body></html>
