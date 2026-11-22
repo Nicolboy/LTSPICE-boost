@@ -24,16 +24,42 @@ $V_{out}$ commence par baisser. Aucun correcteur ne le supprime.
 
 ## L'ascension
 
-| | étape | ce qui change | ce qui la valide |
+Ordonnée par **phase ajoutée croissante** — c'est elle qui décide de la
+difficulté, pas le nombre de paramètres.
+
+| | étape | phase ajoutée | ce qu'elle mesure |
 |---|---|---|---|
-| **R0** | boucle ouverte | *(fait)* | l'étalon, rapport cyclique fixe |
-| **R1** | **mesurer le plant** | rien au circuit | $f_{RHP}$ et $f_{p}$ mesurés = formule fermée |
-| **R2** | intégrateur pur | **un** paramètre : le gain | $V_{out}$ rejoint la consigne, marge mesurée |
-| **R3** | PI | + un zéro | marge de phase ≥ 45° |
-| **R4** | type II | + un pôle HF | le bruit de commutation ne remonte pas dans la commande |
-| **R5** | **retard numérique** | 1,5 période | c'est lui qui décide |
-| **R6** | gain scheduling | DCM ↔ CCM | les deux modes avec un seul jeu |
-| **R7** | quantification | ADC, résolution PWM | cycle limite, bruit de quantification |
+| **R0** | boucle ouverte | — | l'étalon, rapport cyclique figé |
+| **R1** | **mesurer le plant** | — | $f_{RHP}$ et $f_{p}$ = formule fermée |
+| **R2** | **P** | **0°** | le gain de boucle, par l'erreur résiduelle |
+| **R3** | I | **−90° partout** | le plafond de bande passante |
+| **R4** | PI | −90° → 0° au zéro | la marge récupérable |
+| **R5** | PID / type II | + pôle HF | le compromis bruit |
+| **R6** | retard numérique | −17,6° à 6,5 kHz | ce qui reste vraiment |
+| **R7** | gain scheduling | — | si les deux modes ne tiennent pas ensemble |
+| **R8** | **ADRC** | — | si R7 ne suffit pas |
+
+### Pourquoi P avant I
+
+J'avais mis l'intégrateur en premier en invoquant « un seul paramètre ».
+C'était le mauvais critère : un intégrateur ajoute **−90° partout**, c'est
+le correcteur le plus contraignant du lot. Un P n'en ajoute **aucun**, et
+ne peut pas saturer puisqu'il n'intègre pas.
+
+Et son erreur résiduelle **mesure** le gain de boucle sans modèle ni
+hypothèse :
+
+$$\Large V_{out} = \frac{V_{out,\text{ouvert}} + K_p G\,V_{ref}}{1 + K_p G}
+\quad\Longrightarrow\quad
+K_p G = \frac{V_{out,\text{ouvert}} - V_{out}}{V_{out} - V_{ref}}$$
+
+### Pourquoi ADRC mérite d'être au tableau
+
+Ce n'est pas un gadget ici. Le plant change **d'ordre** entre DCM et CCM,
+pas seulement de gain — un seul pôle réel d'un côté, deux pôles complexes
+plus un zéro RHP de l'autre. Un observateur de perturbation estime cette
+variation et la rejette, ce qui rendrait R7 inutile. Et la CLA du C2000
+est dimensionnée pour le porter.
 
 **R1 est le cœur.** Le plant se **mesure** par injection, il ne s'écrit
 pas — exactement comme l'étape 0 validait le câblage avant toute question
