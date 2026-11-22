@@ -828,3 +828,40 @@ C'est ma lecture qui était fausse, et précisément sous 40 V où une
 Le réflexe à garder : quand une fiche publie à la fois une courbe et
 une intégrale de cette courbe, **intégrer la courbe lue** avant de s'en
 servir comme étalon.
+
+## Q — L'axe borné, troisième fois (2026-11-22)
+
+| | l'axe | ce qu'il cachait |
+|---|---|---|
+| J6 | 228 V | **742 V** de surtension d'ouverture |
+| K2 | −95 V | **−113,2 V** d'excursion négative |
+| **Q** | **78,8 à 79,9 V** | **+84 V**, un dépassement de 4 V |
+
+Les deux panneaux d'une même figure avaient des échelles différentes —
+55 à 85 V d'un côté, 1,1 V de l'autre. Deux conséquences, et la seconde
+est pire :
+
+1. un écart de 0,10 V occupait un dixième du cadre et **paraissait
+   énorme**, pendant que les 10 V du DCM paraissaient modestes ;
+2. le **dépassement transitoire à 84 V était hors cadre**, donc invisible.
+
+C'est le concepteur qui a demandé le changement d'échelle — « on ne voit
+rien ». Remises à 20 V des deux côtés, la figure dit enfin ce qu'elle
+mesure.
+
+> Trois fois la même faute en deux jours. La vigilance n'y suffit pas :
+> **tracer une fois sans borne** doit précéder tout choix d'échelle, et
+> deux panneaux comparés doivent partager la leur.
+
+### Ce que le dépassement apporte
+
+Il **confirme R1 par une seconde voie**. La réponse à l'échelon montre
+une sonnerie amortie de ~3 cycles en 0,7 ms, soit **~4 kHz** — le pôle
+double mesuré au Bode vaut **3,90 kHz**. En DCM, descente en escalier
+sans aucune sonnerie : plant du premier ordre, comme annoncé.
+
+Temporel et fréquentiel, mesurés indépendamment, disent la même chose.
+
+Et il **change une conclusion pratique** : en CCM l'excursion utile
+n'est pas l'écart statique de 0,10 V, c'est le **dépassement de 4 V**.
+C'est cela que la boucle devra amortir.

@@ -173,10 +173,10 @@ def main() -> int:
         a.set_ylabel("V(nout)  [V]", color=V, fontsize=10.5)
         a.set_title(lib, color=(BL if k else OR), fontsize=12.5, pad=11,
                     weight="bold")
-        if k == 0:
-            a.set_ylim(55, 85)
-        else:
-            a.set_ylim(78.8, 79.9)
+        a.set_ylim(*((60, 80) if k == 0 else (70, 90)))
+        # la valeur reste lisible meme quand la courbe est plate
+        a.text(.5, .09, f"{av:.2f} V → {ap:.2f} V", transform=a.transAxes,
+               ha="center", color="#e6e9ef", fontsize=10.5, weight="bold")
 
         a = ax[1, k]
         a.set_facecolor(G); a.grid(alpha=.17, color=V, lw=.6)
@@ -193,6 +193,10 @@ def main() -> int:
     fig.suptitle("RÉACTION DE $V_{out}$ À UN ÉCHELON DE CHARGE — "
                  "BOUCLE OUVERTE, rapport cyclique figé",
                  color="#e6e9ef", fontsize=13.5, weight="bold", y=.975)
+    fig.text(.5, .052, "MÊME ÉCHELLE SUR LES DEUX PANNEAUX — 20 V. "
+             "C'est ce qui rend le contraste lisible : à droite, la courbe "
+             "est une droite.", ha="center", color="#e6e9ef", fontsize=9.6,
+             weight="bold")
     fig.text(.5, .018, "En DCM la boucle ouverte est une source de COURANT "
              "déguisée ; en CCM elle est déjà presque une source de tension. "
              "Un facteur CENT sépare les deux — c'est la raison profonde du "
