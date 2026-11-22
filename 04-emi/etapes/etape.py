@@ -396,8 +396,14 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # par le ic= du condensateur de sortie, constate dans le meme .op.raw.
     # force_ic : meme .ic en BOUCLE OUVERTE (identification du plant), pour
     # ne pas demarrer a 114 A quand la rampe vaut 0 a t = 0.
-    bloc_ic = (f".ic I(L1)={a['iin']:.4f}" + chr(10)
-               if (kp or force_ic) else "")
+    # PI : V(nint) aussi. En continu Cint (1 F) est ouvert et le noeud de
+    # l'integrale n'a que la source Gint : point de repos indetermine ->
+    # Newton, Gmin et source stepping echouaient, le pseudo-transitoire
+    # partait d'un etat faux (127 A dans L1 a t ~ 0, tous les cas PI,
+    # 2026-11-22). .ic le tient a D0 pendant le point de repos.
+    bloc_ic = (f".ic I(L1)={a['iin']:.4f}"
+               + (f" V(nint)={duty:.6f}" if (kp and ki) else "")
+               + chr(10) if (kp or force_ic) else "")
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
     if charge:
         rl = VOUT ** 2 / p if rl is None else rl
