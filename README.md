@@ -225,6 +225,7 @@ aveugle dans l'un ou l'autre.
 | 2b | [… étendu 200-800 kHz : calibre vs technologie](02-mosfet-diode/#11-extension-200-800-khz--le-calibre-avant-la-technologie) | ✅ fait |
 | 3 | [Architectures (CCM/DCM) et inductance](03-architectures/) | ✅ fait |
 | 4 | [EMI conduite](04-emi/) | 🚧 en cours (gabarit CISPR 25 obtenu, premiers spectres, architecture tranchée) |
+| 5 | [Régulation : Ziegler-Nichols, PI/PID, DCM/CCM](05-regulation/) | 🚧 en cours (Ku/Tu mesurés et recoupés, PID CCM, basculement à faire) |
 
 ## Méthode générale
 
