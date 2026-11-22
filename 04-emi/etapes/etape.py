@@ -101,7 +101,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
            vin=None, rl=None, pwm=None, ki=None, kp=None, vref=None,
            echelon=None, sobre=False, cout_we=None, tau_mes=None, echant=False, cout_hf=False, retard=False,
-           force_ic=False):
+           force_ic=False, kd=None):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -257,6 +257,13 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # PI (kp ET ki) : le terme constant D0 du P devient l'INTEGRALE de
     # l'erreur, V(nint), initialisee a D0. Sans ki, texte inchange.
     d0x = "V(nint)" if (kp and ki) else f"{duty:.6f}"
+    # DERIVEE DISCRETE (kd) : Kd/T.(e[n] - e[n-1]) = Kd/T.(s[n-3] - s[n-2]),
+    # comme le calculera le C2000. Un ddt() sur la sortie en ESCALIER du
+    # bloqueur ne donnerait que des impulsions. Un troisieme bloqueur
+    # (nsh3) garde l'echantillon de la periode precedente.
+    if kd and not (echant and retard):
+        raise ValueError("kd : exige echant et retard (derivee discrete)")
+    dterm = (f" + {kd * FSW:.6g}*(V(nsh3) - V({vmes}))" if kd else "")
     nom_mos = {True: "ipd530", False: None}.get(mos, mos)
     if nom_mos == "fdd770":
         bloc_s = chr(10).join((
@@ -270,7 +277,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
                  f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
-                 f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
+                 f"({vref:.4f} - V({vmes})){dterm}, 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
                  f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))
@@ -316,7 +323,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
                  f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
-                 f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
+                 f"({vref:.4f} - V({vmes})){dterm}, 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
                  f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))
@@ -356,7 +363,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             chr(10).join((
                 "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, interrupteur ideal",
                 f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
-                f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
+                f"({vref:.4f} - V({vmes})){dterm}, 0.05, 0.95)",
                 f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                 f"0 {{tsw}})",
                 "Bg    ng    0  V=if(V(nctrl)>V(nramp), 5, 0)"))
@@ -376,7 +383,8 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     if sobre:
         sauve = (f".save V(nout) I(L1) I(Vd) I(Vbat){sv_pwm}"
                  + (" V(nsh)" if echant else "")
-                 + (" V(nsh2)" if (echant and retard) else ""))
+                 + (" V(nsh2)" if (echant and retard) else "")
+                 + (" V(nsh3)" if kd else ""))
     else:
         sauve = (f".save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) "
                  f"V(nda) V(ngg){sv_pwm}\n"
@@ -467,6 +475,12 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                 f"Vclk2 nclk2 0 PULSE(0 1 {{tsw*{phase_ech - 0.001:g}}} 1n 1n "
                 f"{{tsw*0.0005}} {{tsw}})",
                 "Ash2 nsh 0 nclk2 0 0 0 nsh2 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
+            if kd:
+                bloc_sortie += chr(10) + chr(10).join((
+                    "* derivee discrete : bloqueur de l'echantillon precedent",
+                    f"Vclk3 nclk3 0 PULSE(0 1 {{tsw*{phase_ech - 0.002:g}}} 1n 1n "
+                    f"{{tsw*0.0005}} {{tsw}})",
+                    "Ash3 nsh2 0 nclk3 0 0 0 nsh3 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
         # Vhigh/Vlow : par defaut la sortie d'un SAMPLEHOLD plafonne a
         # 10 V -- la mesure de 80 V ressortait a 10 V et D collait a 0,95.
     if kp and ki:

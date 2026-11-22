@@ -1,0 +1,73 @@
+# FICHE DE BANC R2 -- regulation (05-regulation), declaree le 2026-11-22
+#
+# Banc de VALIDATION DE METHODE, choisi par le concepteur en seance : il ne
+# represente PAS le montage final, decrit par ../banc.toml (IPD530N15N3,
+# Nichicon 130 uF). Fiche dediee, a la demande du gendarme (verdicts du
+# 2026-11-22) : la fiche racine contredisait ce banc et le prochain lecteur
+# aurait herite de la faute A1. Les ecarts au montage sont listes plus bas.
+#
+# Usage : gendarme.py 05-regulation/banc_r2.toml <netlist R2>
+
+[montage]                 # le banc R2 tel qu'il est simule
+inductance    = "SER2211-473 47 uH"            # Coilcraft, Model1D aplati
+mode          = "CCM et DCM"                   # frontiere ~15 W sous 20 V
+diode         = "Vishay V8PA22 200 V 8 A"
+interrupteur  = "onsemi FDD770N15A"            # Infineon abandonne (blocages)
+reseau_sortie = "Wurth 860130874006 10 uF/100 V (WCAP-ATET) || MLCC 1 uF X7R 200 V 1812 + 0,2 ohm"
+mesure        = "RC 1 us, echantillon a 0,998 T (fin de fenetre S+H F28P551), retard d'une periode"
+correcteur    = "P, PI (anti-windup par arret d'integration), PID (derivee discrete)"
+
+[conditions]
+vin_v  = 20.0
+vout_v = 80.0
+fsw_hz = 200e3
+rg_ohm = 10.0
+justification_vitesse = """\
+Rg = 10 ohms, celui du chapitre 4 (arbitrage CEM), inchange en R2 : la \
+vitesse de commutation ne fixe pas la dynamique de boucle etudiee ici."""
+
+[mesurande]
+grandeur = "stabilite de boucle : Ku, Tu, limites de Kp et Ki, marges, reponse a l'echelon"
+p_nom_w  = 50.0                # pire point CCM (marge minimale)
+regime   = "transitoire"       # echelons de charge
+asservi  = true
+# Pas d'ordre_de_grandeur_w : le mesurande n'est pas une puissance. La
+# regle D3 (capacite qui dissipe le mesurande) ne s'applique donc pas --
+# elle refusait Cout, qui n'est pas commute (faux positif reconnu par le
+# gendarme).
+
+[provenance]
+inductance      = "datasheet"     # modele Coilcraft publie
+diode           = "datasheet"     # modele Vishay
+interrupteur    = "datasheet"     # modele onsemi FDD770N15A.lib
+cout_wurth      = "bibliotheque"  # Rser 0,37 ohm / Lser 5,6 nH LUS dans
+                                  # WCAP-ATET.lib, non confrontes a la fiche
+                                  # technique (reserve du gendarme)
+mlcc_hf         = "projet"        # C_MLCC1812 de 04-emi/gen_emi_dm.py
+fenetre_adc     = "datasheet"     # tms320f28p551sg.pdf, tableau 6-20
+choix_banc      = "utilisateur"   # Cout 10 uF, FDD770, MLCC, echantillon
+                                  # avant fermeture, retard : decisions du
+                                  # concepteur en seance, 2026-11-22
+l_maille        = "POSEE"         # 10 nH, comme au chapitre 4
+
+[ecarts_au_montage]
+# Ce que le banc R2 ne represente PAS -- aucun reglage R2 ne se transfere
+# chiffre au montage sans re-mesure.
+sortie       = "10 uF Wurth (ESR 0,37 ohm) contre 130 uF Nichicon GXF (159 mOhm) : f0 1,8 kHz contre ~0,5 kHz"
+interrupteur = "FDD770N15A contre IPD530N15N3"
+retard       = "une periode modelisee ; conversion + CLA reelles a verifier sur cible"
+
+[resultats_retenus]       # au commit qui accompagne cette fiche
+p_ccm_30w     = "Ku 0,0207 +-3 %, Tu 0,21 ms (k-section et multi-tons)"
+p_ccm_50w     = "Ku 0,0135 +-10 % (k-section, echelon 40->50 W ; multi-tons 0,0152 a 4,28 kHz), Tu 0,25 ms"
+p_dcm_10w     = "limite 1,35 a 1,55 vers 31 kHz (fsw/6,5), retard compris"
+pi_ccm        = "Kp 0,00558, Ki 8 ; limite Ki entre 18 et 21,6 a ce Kp, grand signal (cycle borne par le DCM)"
+pi_dcm        = "Kp 0,61, Ki 785 (0,45 Ku_DCM)"
+pid_ccm       = "Kp 0,014, Ki 20, Kd 1,04e-6 (r2_pid_retenu.npy) : croisement 7,6 kHz, MP 53 deg, MG 6,3 dB a 21,7 kHz dans la bande mesuree 2-60 kHz, a 50 W SEULEMENT"
+# RESERVES sur le PID (gendarme, 2026-11-22) :
+#  - au-dela de 60 kHz |L| remonte (derivee) : marge >= 3,9 dB si |H| reste
+#    plat jusqu'a 100 kHz, >= 5,7 dB s'il decroit en 1/f -- NON ETABLIE ;
+#    mesurer H sur 60-100 kHz pour la fixer ;
+#  - plant non mesure a 20 et 40 W : marges non etablies hors de 50 W ;
+#  - aucune k-section en boucle fermee sur le PID : les echelons montrent
+#    qu'il tient, pas ses marges.

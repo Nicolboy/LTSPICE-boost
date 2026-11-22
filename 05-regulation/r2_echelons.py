@@ -38,7 +38,15 @@ T = 1 / FSW
 N_AVANT, N_APRES = 600, 1400
 P_FRONT = 15.3
 ECHELONS = [(5, 15), (10, 30), (25, 50), (40, 20), (25, 15), (10, 5)]
-PI = {"ccm": (0.00932, 12.0), "dcm": (0.61, 785.0)}
+PI = {"ccm": (0.00932, 12.0), "dcm": (0.61, 785.0),
+      # PI CCM re-regle au PIRE point, 50 W (r2_k50.py) : Ku(50 W) ~ 0,0135,
+      # Kp 0,45 x 0,0124 (encadrement retenu) ; Ki limite ~20,5 a Kp 0,0056,
+      # retenu 8 (~40 % de la limite, comme 12/30 a 30 W).
+      "ccm2": (0.00558, 8.0),
+      # PID CCM calcule sur le plant MESURE a 50 W (r2_pid_calc.py, multi-
+      # tons 2-60 kHz) : croisement 7,5 kHz, MP 53 deg, MG 6,3 dB a 21,7 kHz
+      # (PI retenu : 2,9 kHz, MP 9 deg, MG 4,7 dB).
+      "pid": (0.0140, 20.0, 1.04e-6)}
 
 
 def d0(p):
@@ -52,7 +60,8 @@ def mode(p):
 
 
 def prepare(p1, p2, pi, n_mes=None):
-    kp, ki = PI[pi]
+    kp, ki, *kd = PI[pi]
+    kd = kd[0] if kd else None
     r1, r2 = VOUT ** 2 / p1, VOUT ** 2 / p2
     if p2 > p1:          # croissant : R1 branchee, R ajoutee en parallele
         rl, ech = r1, (1 / (1 / r2 - 1 / r1), N_AVANT * T)
@@ -63,7 +72,7 @@ def prepare(p1, p2, pi, n_mes=None):
                      n_mes=n_mes or (N_AVANT + N_APRES), dtmax=200e-9,
                      duty=d0(p1), kp=kp, ki=ki, vref=VOUT, echelon=ech,
                      sobre=True, cout_we=z.COUT_WE, tau_mes=z.TAU_MES,
-                     echant=z.ECHANT, retard=z.RETARD, cout_hf=z.COUT_HF)
+                     echant=z.ECHANT, retard=z.RETARD, cout_hf=z.COUT_HF, kd=kd)
     f = ICI / f"ze_{p1}_{p2}_{pi}.cir"
     f.write_text(n, encoding="utf-8")
     return f
@@ -90,8 +99,8 @@ def blanc() -> int:
     return 0
 
 
-def main() -> int:
-    fs = [prepare(p1, p2, pi) for p1, p2 in ECHELONS for pi in PI]
+def main(liste=None) -> int:
+    fs = [prepare(p1, p2, pi) for p1, p2 in ECHELONS for pi in (liste or PI)]
     t0 = time.monotonic()
     res = ltspice_run.lance_lot(fs, procs=4)
     print(f"  {len(fs)} cas ({N_AVANT}+{N_APRES} periodes) : "
@@ -110,5 +119,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "complet":
-        raise SystemExit(main())
+        raise SystemExit(main(sys.argv[2:] or None))
     raise SystemExit(blanc())

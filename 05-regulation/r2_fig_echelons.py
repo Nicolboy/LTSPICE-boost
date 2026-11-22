@@ -19,8 +19,11 @@ ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import r2_echelons as e                                      # noqa: E402
 
-COUL = {"ccm": "#ff9944", "dcm": "#66dd66"}
-LIB = {"ccm": "PI CCM (Kp 0,0093, Ki 12)", "dcm": "PI DCM (Kp 0,61, Ki 785)"}
+COUL = {"ccm": "#ff9944", "dcm": "#66dd66", "ccm2": "#66aaff", "pid": "#ff66ff"}
+LISTE = sys.argv[1:] or ["ccm", "dcm"]
+LIB = {"ccm": "PI CCM 30 W (Kp 0,0093, Ki 12)", "dcm": "PI DCM (Kp 0,61, Ki 785)",
+       "ccm2": "PI CCM 50 W (Kp 0,0056, Ki 8)",
+       "pid": "PID CCM 50 W (Kp 0,014, Ki 20, Kd 1,04e-6)"}
 
 
 def mesures(D):
@@ -42,7 +45,7 @@ def mesures(D):
 plt.style.use("dark_background")
 fig = plt.figure(figsize=(19, 14))
 fig.suptitle("R2 — six échelons de charge, deux réglages PI appliqués chacun "
-             "seul (aucun basculement) — banc complet\n⟨Vout⟩ par période "
+             "seul (aucun basculement) — banc complet — " + " / ".join(LIB[x] for x in LISTE) + "\n⟨Vout⟩ par période "
              "(75-85 V) et D par période, t = 0 à l'échelon ; frontière "
              "DCM/CCM 15,3 W", fontsize=12)
 gs = fig.add_gridspec(4, 3, height_ratios=[2, 1, 2, 1], hspace=0.8)
@@ -51,7 +54,7 @@ for idx, (p1, p2) in enumerate(e.ECHELONS):
     a = fig.add_subplot(gs[2 * r, c])
     b = fig.add_subplot(gs[2 * r + 1, c], sharex=a)
     titre = [f"{p1} → {p2} W   ({e.mode(p1)}/{e.mode(p2)})"]
-    for pi in ("ccm", "dcm"):
+    for pi in LISTE:
         f = ICI / f"ze_{p1}_{p2}_{pi}.npz"
         if not f.exists():
             titre.append(f"{LIB[pi]} : simulation morte")
@@ -82,6 +85,6 @@ for idx, (p1, p2) in enumerate(e.ECHELONS):
     b.set_xlabel("t depuis l'échelon [ms]", fontsize=8)
     if idx == 0:
         a.legend(fontsize=8, loc="lower right")
-out = ICI / "r2_echelons.png"
+out = ICI / f"r2_echelons_{'_'.join(LISTE)}.png"
 fig.savefig(out, dpi=115, bbox_inches="tight")
 print(f"figure : {out}")
