@@ -46,7 +46,13 @@ PI = {"ccm": (0.00932, 12.0), "dcm": (0.61, 785.0),
       # PID CCM calcule sur le plant MESURE a 50 W (r2_pid_calc.py, multi-
       # tons 2-60 kHz) : croisement 7,5 kHz, MP 53 deg, MG 6,3 dB a 21,7 kHz
       # (PI retenu : 2,9 kHz, MP 9 deg, MG 4,7 dB).
-      "pid": (0.0140, 20.0, 1.04e-6)}
+      "pid": (0.0140, 20.0, 1.04e-6),
+      # PID a derivee sur DEUX echantillons (r2_pid2_calc.py, plant 50 W
+      # mesure 2-97,5 kHz) : fc 6,9 kHz, MP 55 deg, MG min 6,7 dB (41 dB a
+      # fsw/2), min|1+L| 0,50. Le PID simple n'avait que 4,8 dB a fsw/2.
+      "pid2": (0.0066, 9.5, 9.88e-7, True),
+      # variante RAPIDE de la meme liste : MP 46 deg au lieu de 55.
+      "pid3": (0.0138, 19.8, 9.2e-7, True)}
 
 
 def d0(p):
@@ -60,8 +66,9 @@ def mode(p):
 
 
 def prepare(p1, p2, pi, n_mes=None):
-    kp, ki, *kd = PI[pi]
-    kd = kd[0] if kd else None
+    kp, ki, *reste = PI[pi]
+    kd = reste[0] if reste else None
+    kd2 = bool(reste[1]) if len(reste) > 1 else False
     r1, r2 = VOUT ** 2 / p1, VOUT ** 2 / p2
     if p2 > p1:          # croissant : R1 branchee, R ajoutee en parallele
         rl, ech = r1, (1 / (1 / r2 - 1 / r1), N_AVANT * T)
@@ -72,7 +79,7 @@ def prepare(p1, p2, pi, n_mes=None):
                      n_mes=n_mes or (N_AVANT + N_APRES), dtmax=200e-9,
                      duty=d0(p1), kp=kp, ki=ki, vref=VOUT, echelon=ech,
                      sobre=True, cout_we=z.COUT_WE, tau_mes=z.TAU_MES,
-                     echant=z.ECHANT, retard=z.RETARD, cout_hf=z.COUT_HF, kd=kd)
+                     echant=z.ECHANT, retard=z.RETARD, cout_hf=z.COUT_HF, kd=kd, kd2=kd2)
     f = ICI / f"ze_{p1}_{p2}_{pi}.cir"
     f.write_text(n, encoding="utf-8")
     return f
@@ -83,7 +90,7 @@ def blanc() -> int:
     fs = [prepare(25, 50, "dcm", 6), prepare(5, 15, "ccm", 6),
           prepare(40, 20, "dcm", 6), prepare(10, 30, "ccm", 6)]
     t0 = time.monotonic()
-    res = ltspice_run.lance_lot(fs, procs=4)
+    res = ltspice_run.lance_lot(fs, procs=3)
     print(f"     {time.monotonic()-t0:.0f} s")
     for f in fs:
         r = res[f.stem]
@@ -102,7 +109,7 @@ def blanc() -> int:
 def main(liste=None) -> int:
     fs = [prepare(p1, p2, pi) for p1, p2 in ECHELONS for pi in (liste or PI)]
     t0 = time.monotonic()
-    res = ltspice_run.lance_lot(fs, procs=4)
+    res = ltspice_run.lance_lot(fs, procs=3)
     print(f"  {len(fs)} cas ({N_AVANT}+{N_APRES} periodes) : "
           f"{time.monotonic()-t0:.0f} s\n")
     for f in fs:

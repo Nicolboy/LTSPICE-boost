@@ -101,7 +101,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
            vin=None, rl=None, pwm=None, ki=None, kp=None, vref=None,
            echelon=None, sobre=False, cout_we=None, tau_mes=None, echant=False, cout_hf=False, retard=False,
-           force_ic=False, kd=None):
+           force_ic=False, kd=None, kd2=False):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -263,7 +263,16 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # (nsh3) garde l'echantillon de la periode precedente.
     if kd and not (echant and retard):
         raise ValueError("kd : exige echant et retard (derivee discrete)")
-    dterm = (f" + {kd * FSW:.6g}*(V(nsh3) - V({vmes}))" if kd else "")
+    # kd2 : derivee sur DEUX echantillons, Kd/(2T).(e[n] - e[n-2]). Le gain
+    # de (1 - z^-2) est NUL a fsw/2 ; celui de (1 - z^-1) y est maximal (2).
+    # Mesure du 2026-11-22 (plant 50 W jusqu'a 97,5 kHz) : avec la derivee
+    # simple, la marge de gain du PID tombait a ~4,5 dB a fsw/2, la boucle
+    # y repassant forcement par -180 deg. nsh4 = echantillon d'il y a deux
+    # periodes.
+    if kd and kd2:
+        dterm = f" + {kd * FSW / 2:.6g}*(V(nsh4) - V({vmes}))"
+    else:
+        dterm = (f" + {kd * FSW:.6g}*(V(nsh3) - V({vmes}))" if kd else "")
     nom_mos = {True: "ipd530", False: None}.get(mos, mos)
     if nom_mos == "fdd770":
         bloc_s = chr(10).join((
@@ -384,7 +393,8 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
         sauve = (f".save V(nout) I(L1) I(Vd) I(Vbat){sv_pwm}"
                  + (" V(nsh)" if echant else "")
                  + (" V(nsh2)" if (echant and retard) else "")
-                 + (" V(nsh3)" if kd else ""))
+                 + (" V(nsh3)" if kd else "")
+                 + (" V(nsh4)" if (kd and kd2) else ""))
     else:
         sauve = (f".save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) "
                  f"V(nda) V(ngg){sv_pwm}\n"
@@ -481,6 +491,12 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                     f"Vclk3 nclk3 0 PULSE(0 1 {{tsw*{phase_ech - 0.002:g}}} 1n 1n "
                     f"{{tsw*0.0005}} {{tsw}})",
                     "Ash3 nsh2 0 nclk3 0 0 0 nsh3 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
+                if kd2:
+                    bloc_sortie += chr(10) + chr(10).join((
+                        "* derivee sur deux echantillons : echantillon d'il y a deux periodes",
+                        f"Vclk4 nclk4 0 PULSE(0 1 {{tsw*{phase_ech - 0.003:g}}} 1n 1n "
+                        f"{{tsw*0.0005}} {{tsw}})",
+                        "Ash4 nsh3 0 nclk4 0 0 0 nsh4 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
         # Vhigh/Vlow : par defaut la sortie d'un SAMPLEHOLD plafonne a
         # 10 V -- la mesure de 80 V ressortait a 10 V et D collait a 0,95.
     if kp and ki:

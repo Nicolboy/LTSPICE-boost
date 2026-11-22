@@ -19,11 +19,13 @@ ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import r2_echelons as e                                      # noqa: E402
 
-COUL = {"ccm": "#ff9944", "dcm": "#66dd66", "ccm2": "#66aaff", "pid": "#ff66ff"}
+COUL = {"ccm": "#ff9944", "dcm": "#66dd66", "ccm2": "#66aaff", "pid": "#ff66ff", "pid2": "#ffdd44", "pid3": "#44eeee"}
 LISTE = sys.argv[1:] or ["ccm", "dcm"]
 LIB = {"ccm": "PI CCM 30 W (Kp 0,0093, Ki 12)", "dcm": "PI DCM (Kp 0,61, Ki 785)",
        "ccm2": "PI CCM 50 W (Kp 0,0056, Ki 8)",
-       "pid": "PID CCM 50 W (Kp 0,014, Ki 20, Kd 1,04e-6)"}
+       "pid": "PID CCM 50 W (Kp 0,014, Ki 20, Kd 1,04e-6)",
+       "pid2": "PID CCM 50 W filtré (Kp 0,0066, Ki 9,5, Kd 9,9e-7, dérivée sur 2 éch.)",
+       "pid3": "PID filtré rapide (Kp 0,0138, Ki 19,8, Kd 9,2e-7, dérivée sur 2 éch.)"}
 
 
 def mesures(D):

@@ -22,12 +22,18 @@ import ltspice_run                                           # noqa: E402
 
 idf.MODES["ccm50"] = dict(p=50.0, rl=80.0 ** 2 / 50.0,
                           src=("z50Ki[0-9]_*.npz", 0.00558), dd=0.001)
-BANDE = "haute" if "haute" in sys.argv else "basse"
+BANDE = ("tres_haute" if "tres_haute" in sys.argv else
+         "haute" if "haute" in sys.argv else "basse")
 # bande basse 2-20 kHz ; bande haute 20-60 kHz : la derivee fait remonter
 # le gain vers fsw/2, la marge de gain se lit au-dela de 20 kHz.
-mt.TONS["ccm50"] = (dict(f=np.arange(2000, 20001, 1000), amp=0.0003)
-                    if BANDE == "basse" else
-                    dict(f=np.arange(20000, 60001, 2500), amp=0.0005))
+# bande tres haute 60-97,5 kHz (sous fsw/2 = 100 kHz, la Nyquist de la
+# lecture par periode) : la derivee fait remonter |L| jusqu'a fsw/2, la
+# marge de gain du PID n'etait pas etablie au-dela de 60 kHz (gendarme).
+mt.TONS["ccm50"] = {
+    "basse": dict(f=np.arange(2000, 20001, 1000), amp=0.0003),
+    "haute": dict(f=np.arange(20000, 60001, 2500), amp=0.0005),
+    "tres_haute": dict(f=np.arange(60000, 97501, 2500), amp=0.0005),
+}[BANDE]
 mt.REF["ccm50"] = (0.0135, 4.0e3)
 
 
@@ -47,7 +53,8 @@ def main() -> int:
     f.with_suffix(".raw").unlink()
     rows = mt.analyse("ccm50", d, s)
     lim = mt.lecture("ccm50", rows)
-    np.save(ICI / ("r2_multitons50.npy" if BANDE == "basse" else "r2_multitons50_haute.npy"), dict(rows=rows, lim=lim),
+    np.save(ICI / {"basse": "r2_multitons50.npy", "haute": "r2_multitons50_haute.npy",
+                  "tres_haute": "r2_multitons50_tres_haute.npy"}[BANDE], dict(rows=rows, lim=lim),
             allow_pickle=True)
     return 0
 

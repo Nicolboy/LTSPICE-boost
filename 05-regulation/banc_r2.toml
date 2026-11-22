@@ -63,11 +63,11 @@ p_ccm_50w     = "Ku 0,0135 +-10 % (k-section, echelon 40->50 W ; multi-tons 0,01
 p_dcm_10w     = "limite 1,35 a 1,55 vers 31 kHz (fsw/6,5), retard compris"
 pi_ccm        = "Kp 0,00558, Ki 8 ; limite Ki entre 18 et 21,6 a ce Kp, grand signal (cycle borne par le DCM)"
 pi_dcm        = "Kp 0,61, Ki 785 (0,45 Ku_DCM)"
-pid_ccm       = "Kp 0,014, Ki 20, Kd 1,04e-6 (r2_pid_retenu.npy) : croisement 7,6 kHz, MP 53 deg, MG 6,3 dB a 21,7 kHz dans la bande mesuree 2-60 kHz, a 50 W SEULEMENT"
+pid_ccm       = "Kp 0,0138, Ki 19,8, Kd 9,2e-7, derivee sur deux echantillons Kd/(2T).(e[n]-e[n-2]) (r2_pid_adopte.npy, r2_pid2_calc.py) : croisement 6,88 kHz, MP 46 deg, MG min 6,8 dB sur 2-97,5 kHz, 34,6 dB a fsw/2, min|1+L| 0,50, a 50 W SEULEMENT"
+pid_abandonne = "Kp 0,014, Ki 20, Kd 1,04e-6 derivee simple : MG 4,8 dB a fsw/2 une fois le plant mesure jusqu'a 97,5 kHz"
 # RESERVES sur le PID (gendarme, 2026-11-22) :
-#  - au-dela de 60 kHz |L| remonte (derivee) : marge >= 3,9 dB si |H| reste
-#    plat jusqu'a 100 kHz, >= 5,7 dB s'il decroit en 1/f -- NON ETABLIE ;
-#    mesurer H sur 60-100 kHz pour la fixer ;
+#  - LEVEE : plant mesure 60-97,5 kHz (r2_multitons50_tres_haute.npy), |H|
+#    plat 1,35-1,53 ; marge etablie jusqu'a fsw/2 ;
 #  - plant non mesure a 20 et 40 W : marges non etablies hors de 50 W ;
 #  - aucune k-section en boucle fermee sur le PID : les echelons montrent
 #    qu'il tient, pas ses marges.

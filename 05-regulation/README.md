@@ -102,15 +102,33 @@ réglages finaux ont été recherchés autour de ces mesures :
 | réglage | Kp | Ki (V⁻¹·s⁻¹) | Kd (V⁻¹·s) | marges |
 |---|---|---|---|---|
 | PI CCM, réglé au pire point (50 W) | 0,0056 | 8 | — | croisement 2,9 kHz, MP 9°, MG 4,7 dB |
-| **PID CCM**, calculé sur le plant mesuré à 50 W | **0,014** | **20** | **1,04·10⁻⁶** | croisement **7,6 kHz**, **MP 53°**, MG 6,3 dB à 21,7 kHz |
+| PID CCM à dérivée simple (abandonné) | 0,014 | 20 | 1,04·10⁻⁶ | croisement 7,6 kHz, MP 52°, MG 4,8 dB à fsw/2 |
+| **PID CCM**, dérivée filtrée, calculé sur le plant mesuré à 50 W | **0,0138** | **19,8** | **9,2·10⁻⁷** | croisement **6,9 kHz**, **MP 46°**, **MG 6,8 dB** (34,6 dB à fsw/2), min \|1+L\| 0,50 |
 | PI DCM (0,45·Ku DCM) | 0,61 | 785 | — | — |
 
-La dérivée est **discrète**, (Kd/T)·(e[n] − e[n−1]), comme dans le
-firmware. Aucun PI seul ne tient à la fois 6 dB de marge de gain et 45°
-de marge de phase sur ce plant. La dérivée le permet, mais sa marge de
-gain n'est établie que dans la bande mesurée (2-60 kHz) et à 50 W.
-Au-delà de 60 kHz, elle vaut entre 3,9 et 5,7 dB selon le comportement
-du plant, et reste à mesurer.
+Aucun PI seul ne tient à la fois 6 dB de marge de gain et 45° de marge
+de phase sur ce plant : il faut une dérivée. Elle est **discrète**,
+comme dans le firmware, et sa forme compte. Le plant a été mesuré
+jusqu'à 97,5 kHz, juste sous fsw/2 : |H| y reste plat. La dérivée
+simple (Kd/T)·(e[n] − e[n−1]) a son gain maximal à fsw/2, où la marge
+tombe à 4,8 dB, et fait alterner D d'une période à l'autre. La dérivée
+sur deux échantillons a un gain nul à fsw/2 :
+
+$$\Large D[n] = \ldots + \frac{K_d}{2T}\,\big(e[n] - e[n-2]\big)$$
+
+Avec elle, la marge de gain minimale est de 6,8 dB sur toute la bande
+mesurée, fsw/2 comprise.
+
+![Six échelons de charge, trois PID CCM](r2_echelons_pid_pid2_pid3.png)
+
+*Six échelons, croissants en haut et décroissants en bas, avec les trois
+PID CCM : dérivée simple, dérivée filtrée à Kp 0,0066, et dérivée filtrée
+à Kp 0,0138, le réglage adopté. Celui-ci reprend la vitesse du PID
+simple (25 → 50 W : −0,80 V et retour en 0,13 ms ; 40 → 20 W : +0,59 V
+en 0,16 ms) et divise par 4 à 5 l'alternance de D d'une période à
+l'autre. Abaisser Kp à 0,0066 gagnait 9° de marge de phase mais
+triplait les temps de retour. Partant du DCM, les trois restent
+lents.*
 
 ## Le problème DCM/CCM
 
@@ -138,7 +156,7 @@ le PI réglé pour le CCM chute de 4,8 V et revient en 5,6 ms.
 ![Six échelons de charge, PI CCM 50 W contre PID CCM](r2_echelons_ccm2_pid.png)
 
 *Six échelons de charge, croissants en haut et décroissants en bas, avec
-le PI CCM réglé à 50 W (bleu) et le PID CCM (magenta). Vout est tracé
+le PI CCM réglé à 50 W (bleu) et le PID CCM à dérivée simple (magenta). Vout est tracé
 sur 75-85 V. Quand l'échelon reste en CCM, le PID divise l'excursion
 par 2,2 à 2,3 et le temps de retour par 7 à 26 : sur 25 → 50 W, il
 passe de −1,7 V en 3,9 ms à −0,7 V en 0,15 ms. Partant du DCM
@@ -158,6 +176,6 @@ modélisé**, et la traversée de la frontière reste à simuler.
 > **Portée.** Tous ces chiffres valent pour le banc de validation
 > (10 µF Würth, FDD770N15A). Ils **ne se transfèrent pas** au montage
 > final (130 µF Nichicon, f₀ ≈ 0,5 kHz au lieu de 1,8 kHz) : c'est la
-> **méthode** qui se transfère. Réserves ouvertes : plant à mesurer
-> au-delà de 60 kHz et à 20-40 W pour les marges du PID, aucune
+> **méthode** qui se transfère. Réserves ouvertes : plant à mesurer à
+> 20-40 W pour les marges du PID (établies à 50 W seulement), aucune
 > k-section en boucle fermée sur le PID, basculement à modéliser.
