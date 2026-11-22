@@ -55,8 +55,10 @@ def main():
                             sharex=True, sharey=True, squeeze=False)
     fig.suptitle(
         "R2 — réponses à l'échelon 40 → 30 W (t = 1 ms), P pur, CCM, "
-        "FDD770N15A + Würth 10 µF/100 V, mesure filtrée 1 µs\n"
-        "⟨V(nout)⟩ par période, mêmes échelles partout", fontsize=12)
+        "FDD770N15A + Würth 10 µF/100 V"
+        + (" + MLCC HF, mesure échantillonnée 0,998 T + retard 1 période\n"
+           if z.SUFFIXE == "c" else ", mesure filtrée 1 µs\n")
+        + "⟨V(nout)⟩ par période, mêmes échelles partout", fontsize=12)
     ts = z.N_AVANT / z.FSW
     for a, (kp, tag, d, v) in zip(axs.flat, cas):
         c = COUL.get(v["cls"], COUL_NL)
@@ -80,7 +82,7 @@ def main():
         a.set_ylabel("⟨V(nout)⟩  [V]")
     axs[0, 0].set_ylim(77.0, 83.0)
     fig.tight_layout()
-    out = ICI / "r2_ziegler_reponses.png"
+    out = ICI / f"r2_ziegler{z.SUFFIXE}_reponses.png"
     fig.savefig(out, dpi=130)
     print(f"figure : {out}  ({n} cas)")
     for kp, tag, d, v in cas:

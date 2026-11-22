@@ -100,7 +100,8 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
            v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
            vin=None, rl=None, pwm=None, ki=None, kp=None, vref=None,
-           echelon=None, sobre=False, cout_we=None, tau_mes=None):
+           echelon=None, sobre=False, cout_we=None, tau_mes=None, echant=False, cout_hf=False, retard=False,
+           force_ic=False):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -117,6 +118,22 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # -- pas de temps effondre a 3,7565 us, Infineon _L0 ET onsemi FDD770
     # (2026-11-22). Avec un condensateur ideal nout ne bougeait pas.
     vmes = "nvm" if tau_mes else "nout"
+    # ECHANTILLONNAGE de la mesure une fois par periode (echant=True), en
+    # debut de periode, quand la rampe repart de 0 : la commande est
+    # constante sur la periode, la rampe ne la croise qu'UNE fois. C'est
+    # ce que fait le C2000 (ADC declenche par l'ePWM, CMPA recharge au
+    # compteur nul). Le filtre tau_mes reste EN AMONT, comme l'RC d'entree
+    # de l'ADC. En DCM a Kp ~ 1, le filtre seul ne suffisait plus : 390
+    # relachements de tolerance, tous aux blocages (2026-11-22).
+    vsrc, vmes = vmes, ("nsh" if echant else vmes)
+    # RETARD D'UNE PERIODE (retard=True, avec echant) : la valeur figee a la
+    # fin de la periode k ne commande que la periode k+2 -- conversion ADC,
+    # calcul CLA et rechargement de CMPA au compteur nul ne tiennent pas
+    # dans les ~10 ns qui restent apres un echantillon a 0,998 T. Modele :
+    # un second bloqueur, cadence 0,001 T AVANT le premier,
+    # recopie la valeur de la periode precedente ; la commande lit celui-ci.
+    if echant and retard:
+        vmes = "nsh2"
     # ETAPE 1 : l'inductance IDEALE devient le modele CONSTRUCTEUR Coilcraft.
     # Model1D aplati -- Rs en serie, puis trois branches en parallele :
     #     Rp seul (impedance de CRETE a la resonance, PUBLIEE au catalogue)
@@ -237,6 +254,9 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # pas par un autre a la legere -- la session a deja paye cette lecon
     # (Wolfspeed 180 s d'abandon contre Infineon 2,8 s). On garde donc les
     # deux et on compare, au lieu de substituer en silence.
+    # PI (kp ET ki) : le terme constant D0 du P devient l'INTEGRALE de
+    # l'erreur, V(nint), initialisee a D0. Sans ki, texte inchange.
+    d0x = "V(nint)" if (kp and ki) else f"{duty:.6f}"
     nom_mos = {True: "ipd530", False: None}.get(mos, mos)
     if nom_mos == "fdd770":
         bloc_s = chr(10).join((
@@ -249,7 +269,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                  "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, etape R2",
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
-                 f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
+                 f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
                  f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
@@ -295,7 +315,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                  "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, etape R2",
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
-                 f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
+                 f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
                  f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
@@ -335,7 +355,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             # circuit calme (Vout 79,8 V), 2010 relachements a 222 us.
             chr(10).join((
                 "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, interrupteur ideal",
-                f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
+                f"Bctrl nctrl 0  V=limit({d0x} + {kp:.6g}*"
                 f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
                 f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                 f"0 {{tsw}})",
@@ -346,7 +366,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     sv_rg = " I(Rgx)" if nom_mos else ""
     sv_pwm = ((" V(nctrl) V(nramp)" if pwm else "")
               + (" V(nint) V(nctrl)" if ki else "")
-              + (" V(nctrl)" if kp else ""))
+              + (" V(nctrl)" if (kp and not ki) else ""))
     # SAUVEGARDE SOBRE : les longues fenetres de la carte de stabilite
     # (des milliers de periodes) font des .raw de plusieurs centaines de Mo
     # avec les 22 traces completes. On ne garde que ce que lisent les
@@ -354,7 +374,9 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # le .save couvre TOUJOURS les .meas, c'est la regle qui a manque le
     # 2026-11-22 quand la netlist avait ete charcutee apres coup.
     if sobre:
-        sauve = f".save V(nout) I(L1) I(Vd) I(Vbat){sv_pwm}"
+        sauve = (f".save V(nout) I(L1) I(Vd) I(Vbat){sv_pwm}"
+                 + (" V(nsh)" if echant else "")
+                 + (" V(nsh2)" if (echant and retard) else ""))
     else:
         sauve = (f".save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) "
                  f"V(nda) V(ngg){sv_pwm}\n"
@@ -372,7 +394,10 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     # reference LTspice l'admet pour les courants d'inductance), donc le
     # transitoire part du voisinage du regime etabli. Vout est deja tenu
     # par le ic= du condensateur de sortie, constate dans le meme .op.raw.
-    bloc_ic = f".ic I(L1)={a['iin']:.4f}" + chr(10) if kp else ""
+    # force_ic : meme .ic en BOUCLE OUVERTE (identification du plant), pour
+    # ne pas demarrer a 114 A quand la rampe vaut 0 a t = 0.
+    bloc_ic = (f".ic I(L1)={a['iin']:.4f}" + chr(10)
+               if (kp or force_ic) else "")
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
     if charge:
         rl = VOUT ** 2 / p if rl is None else rl
@@ -405,6 +430,51 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
         bloc_sortie = "\n".join((
             "* sortie RAIDE : aucun rappel, le point est sur un fil",
             f"Vo   nout 0    DC {VOUT:.1f}"))
+    if cout_hf:
+        # DECOUPLAGE HF DE LA FICHE (banc.toml, reseau_sortie) :
+        # 1 uF X7R 200 V 1812 + 0,2 ohm placee, en parallele sur la sortie.
+        # Valeurs du modele C_MLCC1812 de gen_emi_dm.py : 0,92 uF effectif
+        # (derate), ESR 4 mOhm, ESL 1,6 nH. Sans lui, la charge de Cj de la
+        # diode au rallumage DCM passait toute par l'ESL de l'electrolytique :
+        # +6 a +14 V de pic sur nout a 180 MHz (2026-11-22).
+        bloc_sortie += chr(10) + chr(10).join((
+            "* decouplage HF de la fiche : 1 uF X7R 200 V 1812 + 0,2 ohm",
+            f"Chf  nout nh1  0.92e-6 ic={VOUT:.1f}",
+            "Rhf  nh1  nh2  0.204",
+            "Lhf  nh2  0    1.6e-9"))
+    # INSTANT D'ECHANTILLONNAGE : echant=True -> debut de periode (0,002 T,
+    # historique) ; echant=<fraction> -> a cette fraction de la periode.
+    # Le debut de periode tombe SUR le rallumage : l'echantillon y captait
+    # la charge de Cj de la diode (gigue de D, 2026-11-22). Le C2000 place
+    # son declenchement ADC loin des fronts.
+    phase_ech = 0.002 if echant is True else float(echant or 0)
+    if echant:
+        bloc_sortie += chr(10) + chr(10).join((
+            "* echantillonneur-bloqueur de la mesure, horloge = debut de periode",
+            f"Vclk nclk 0   PULSE(0 1 {{tsw*{phase_ech:g}}} 1n 1n {{tsw*0.01}} {{tsw}})",
+            f"Ash  {vsrc} 0 nclk 0 0 0 nsh 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
+        if retard:
+            if phase_ech < 0.01:
+                raise ValueError("retard : echantillonner en fin de periode")
+            bloc_sortie += chr(10) + chr(10).join((
+                "* retard d'une periode : second bloqueur, 0,001 T avant le premier",
+                f"Vclk2 nclk2 0 PULSE(0 1 {{tsw*{phase_ech - 0.001:g}}} 1n 1n "
+                f"{{tsw*0.0005}} {{tsw}})",
+                "Ash2 nsh 0 nclk2 0 0 0 nsh2 0 SAMPLEHOLD Vhigh=1000 Vlow=-1000"))
+        # Vhigh/Vlow : par defaut la sortie d'un SAMPLEHOLD plafonne a
+        # 10 V -- la mesure de 80 V ressortait a 10 V et D collait a 0,95.
+    if kp and ki:
+        # INTEGRATEUR DU PI. Meme principe que l'etape R3 (G charge 1 F,
+        # dV/dt = I), plus un ANTI-WINDUP par arret d'integration : quand
+        # V(nint) est en butee (0,05 / 0,95) et que l'erreur pousse plus
+        # loin, le courant d'integration est coupe. Sans lui, l'integrale
+        # s'emballerait au demarrage et pendant les saturations de D.
+        e = f"({vref:.4f} - V({vmes}))"
+        bloc_sortie += chr(10) + chr(10).join((
+            f"* PI : integrale de l'erreur, Ki = {ki:.6g} /V/s, anti-windup",
+            f"Gint 0 nint VALUE={{if((V(nint)>=0.95 & {e}>0) | "
+            f"(V(nint)<=0.05 & {e}<0), 0, {ki:.6g}*{e})}}",
+            f"Cint nint 0  1 ic={duty:.6f}"))
     if tau_mes:
         bloc_sortie += chr(10) + chr(10).join((
             f"* mesure de Vout : filtre RC anti-repliement ADC, tau {tau_mes*1e6:.3g} us",

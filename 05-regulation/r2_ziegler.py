@@ -52,7 +52,7 @@ R_OUV = 1.0 / (1.0 / 160.0 - 1.0 / R_BASE)         # 640 ohms, ouverte
 # 860130874006 : WCAP-ATET alu 10 uF / 100 V, Rser 0,37 ohm, Lser 5,6 nH
 # -- zero d'ESR vers 43 kHz, loin au-dessus de Tu (~4 kHz).
 COUT_WE = "860130874006"
-SUFFIXE = "f" if COUT_WE else ""
+SUFFIXE = "c" if COUT_WE else ""   # c : banc complet (f : sans S&H ni MLCC)
 N_AVANT, N_APRES = 200, 1200     # 1 ms puis 6 ms : ~15 Tu, FFT a 167 Hz
 
 
@@ -61,7 +61,8 @@ def prepare(tag, kp, mos):
                      ser=True, v8pa22=True, mos=mos, n_etab=0,
                      n_mes=N_AVANT + N_APRES, dtmax=200e-9, duty=DUTY0,
                      kp=kp, vref=VREF, echelon=(R_OUV, N_AVANT / FSW, "-"),
-                     sobre=True, cout_we=COUT_WE, tau_mes=TAU_MES)
+                     sobre=True, cout_we=COUT_WE, tau_mes=TAU_MES,
+                     echant=ECHANT, retard=RETARD, cout_hf=COUT_HF)
     f = ICI / f"{tag}.cir"
     f.write_text(n, encoding="utf-8")
     return f
@@ -165,6 +166,12 @@ def blanc(kp=0.003) -> int:
 # TAU_MES, le filtre RC de l'entree ADC (1 us, -1,4 deg a 3,9 kHz).
 MOS = "fdd770"
 TAU_MES = 1e-6
+# BANC COMPLET (2026-11-22) : mesure echantillonnee a 0,998 T (fin de
+# fenetre S+H du F28P551 avant la fermeture), RETARD d'une periode
+# (conversion + CLA + rechargement CMPA), MLCC HF de la fiche en sortie.
+ECHANT = 0.998
+RETARD = True
+COUT_HF = True
 T_LIRE = 1e-3           # on lit l'enveloppe a partir de 1 ms apres l'echelon
 
 
@@ -207,7 +214,12 @@ def verdict(z):
     mt = tb > ts + T_LIRE
     dcm = float(np.mean(im[mt] < 0))
     butee = bool((db[mt].min() < 0.051) or (db[mt].max() > 0.949))
-    if r < 0.8:
+    # PLANCHER DE BRUIT : une enveloppe finale sous 0,1 V c-a-c est une
+    # reponse eteinte. Sans ce test, le bruit constant d'une reponse deja
+    # amortie etait classe "ENTRETENU" (Kp 0,001 et 0,003, 2026-11-22).
+    if env[-n3:].mean() < 0.10:
+        cls = "decroit"
+    elif r < 0.8:
         cls = "decroit"
     elif r > 1.25:
         cls = "croit"
