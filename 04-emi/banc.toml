@@ -34,7 +34,7 @@ cout_neutre   = "2,2 contre 10 uF : 999,30 contre 999,19 mW, soit 0,01 %"
 inductance    = "I crete 2,845 A contre Isat 4,4 A publie, 35 % de marge"
 bilan         = "ferme, porte W2 du gendarme -- VALIDE"
 
-[point_ccm.pertes_mw]
+[point_ccm.pertes_detail_mw]   # le total est pertes_mw ci-dessus ; meme nom = TOML illisible (gendarme A0, 2026-11-22)
 rp_inductance = 164.86      # 16,5 % -- contre 47 % a 8 W
 mosfet        = 414.81      # 41,5 %
 diode         = 367.49      # 36,8 %

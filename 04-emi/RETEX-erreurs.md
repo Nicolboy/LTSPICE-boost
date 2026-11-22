@@ -865,3 +865,39 @@ Temporel et fréquentiel, mesurés indépendamment, disent la même chose.
 Et il **change une conclusion pratique** : en CCM l'excursion utile
 n'est pas l'écart statique de 0,10 V, c'est le **dépassement de 4 V**.
 C'est cela que la boucle devra amortir.
+
+## R — La moyenne pondérée par les pas (2026-11-22)
+
+**La faute.** Pour lire $V_{out}$ moyen et son ondulation basse
+fréquence, une « moyenne glissante sur une période » calculée par somme
+cumulée **directement sur les échantillons du `.raw`**. Or les pas de
+LTspice ne sont pas uniformes : ils se resserrent de plusieurs ordres de
+grandeur sur chaque front de commutation. Une moyenne d'échantillons est
+donc une moyenne **pondérée par la densité de pas** — les instants de
+commutation comptent des centaines de fois plus que le plateau.
+
+**Le relevé.** Témoin R2 (P pur, $K_p$ = 0,002, 40 W) : 79,933 V lus par
+échantillons contre **80,087 V** en vraie moyenne temporelle sur la même
+fenêtre. 0,15 V d'écart — plus gros que l'« erreur de boucle » de
+0,067 V qu'on prétendait mesurer. Et le rapport cyclique moyen affiché
+gelait à 0,7500 alors que `V(nctrl)` suivait sa formule à 10⁻⁸ près : la
+pondération parasite écrasait ses variations de ±2 mV.
+
+**Comment c'est sorti.** Pas par la relecture du code : par une
+**incohérence entre deux fenêtres** (0,73 V d'ondulation sur les
+derniers 30 %, 2,5 V sur les derniers 60 %) puis par le contrôle de
+l'identité `V(nctrl) = limit(d₀ + Kp·(Vref − V(nout)))` point par point
+sur le `.raw` — qui a innocenté le banc et accusé la lecture.
+
+**La parade, systématique.** Rééchantillonner sur **grille uniforme**
+(`np.interp`, 256 points par période) **avant** toute moyenne glissante,
+toute FFT, toute mesure d'amplitude. Les `.meas AVG` de LTspice, eux,
+intègrent en temps et restent justes — c'est d'ailleurs l'étalon qui
+permet de contrôler sa propre lecture. `r1b_echelon.py` porte la même
+faute ; ses conclusions qualitatives (contraste DCM/CCM) tiennent, ses
+chiffres fins sont à reprendre.
+
+> Toute statistique calculée sur les échantillons bruts d'un `.raw` à
+> pas variables est fausse par construction. La question n'est pas
+> « combien », mais « où encore » : chercher `cumsum` et `np.mean` sur
+> des tableaux issus de `r.trace()` sans `interp` préalable.

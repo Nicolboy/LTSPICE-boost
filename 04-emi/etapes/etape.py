@@ -54,10 +54,53 @@ def attendu(p=P_VISEE, vin=VIN, l_h=L_H, fsw=FSW, rds=RDS, vf=VF):
 SER2211 = ("SER2211-473", 47.0e-6, 0.0107, 8.183e-12, 7315.8901, 140.0)
 
 
+def cout_wurth(ref):
+    """Condensateur de sortie CONSTRUCTEUR Wurth, lu dans la bibliotheque
+    LOCALE `lib_spice_commun/WurthElektronik/ltspice-capacitors-v1`.
+
+    Les elements du sous-circuit (Rser, Lser, C1, Rpar) sont LUS dans le
+    .lib du fabricant et ecrits a plat, avec ic=80 V sur la capacite.
+
+    POURQUOI PAS `X... sous-circuit` + `.ic V(nout)=80` (essaye le
+    2026-11-22) : pendant le point de repos, la source de .ic qui tient
+    nout fournit le courant de charge a la place du condensateur ; l'ESL
+    part donc a 0 A et doit sauter a 0,5 A a t = 0+ -- nout s'effondrait
+    a 3,5 V en 20 fs, le noeud interne a -57 V. Avec ic= sur la capacite
+    elle-meme, la contrainte est aux bornes de C, le courant de charge
+    traverse Rser et Lser des le point de repos : etat initial coherent.
+    Rend (lignes de netlist, nom du sous-circuit).
+    """
+    import re
+    base = LIB / "WurthElektronik" / "ltspice-capacitors-v1" / "sub"
+    for f in sorted(base.glob("*.lib")):
+        t = f.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"(?ms)^\.subckt (" + re.escape(ref)
+                      + r"_\S+) 1 2\s*$(.*?)^\.ends", t)
+        if m:
+            break
+    else:
+        raise ValueError(f"{ref} introuvable dans {base}")
+    el = {}
+    for ligne in m.group(2).splitlines():
+        c = ligne.split()
+        if len(c) == 4 and c[0] in ("Rser", "Lser", "C1", "Rpar"):
+            el[c[0]] = c[3]                 # texte du fabricant, tel quel
+    if set(el) != {"Rser", "Lser", "C1", "Rpar"}:
+        raise ValueError(f"{m.group(1)} : elements inattendus {el}")
+    return chr(10).join((
+        f"* sortie CONSTRUCTEUR Wurth {m.group(1)} -- {f.name}, "
+        f"bibliotheque locale, elements lus tels quels",
+        f"Rcs  nout nc3  {el['Rser']}",
+        f"Cout nc3  nc4  {el['C1']} ic={VOUT:.1f}",
+        f"Rcp  nc3  nc4  {el['Rpar']}",
+        f"Lcs  nc4  0    {el['Lser']}")), m.group(1)
+
+
 def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
            c_noeud=0.0, n_etab=20, dtmax=1e-9, cout=130e-6, ser=False,
            v8pa22=False, l_maille=10e-9, mos=False, rg=10.0, vgs=10.0,
-           vin=None, rl=None, pwm=None, ki=None, kp=None, vref=None):
+           vin=None, rl=None, pwm=None, ki=None, kp=None, vref=None,
+           echelon=None, sobre=False, cout_we=None, tau_mes=None):
     """TOUT IDEAL. Aucun modele constructeur, aucun parasite, aucun LISN.
 
     But : valider le CABLAGE et la PHYSIQUE. Si cette etape ne rend pas le
@@ -66,6 +109,14 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     """
     vin = VIN if vin is None else vin
     a = attendu(p, vin=vin)
+    # MESURE DE Vout FILTREE (tau_mes, s) : le filtre RC anti-repliement
+    # de l'entree ADC. Sans lui, Bctrl lit V(nout) INSTANTANE : avec un
+    # condensateur reel (ESR + ESL) le blocage fait sauter nout de
+    # plusieurs volts pile au croisement rampe/commande, la commande
+    # repasse de part et d'autre de la rampe et la grille bascule sans fin
+    # -- pas de temps effondre a 3,7565 us, Infineon _L0 ET onsemi FDD770
+    # (2026-11-22). Avec un condensateur ideal nout ne bougeait pas.
+    vmes = "nvm" if tau_mes else "nout"
     # ETAPE 1 : l'inductance IDEALE devient le modele CONSTRUCTEUR Coilcraft.
     # Model1D aplati -- Rs en serie, puis trois branches en parallele :
     #     Rp seul (impedance de CRETE a la resonance, PUBLIEE au catalogue)
@@ -128,8 +179,10 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     if duty is None:
         if a["mode"] == "DCM":
             rl = VOUT ** 2 / p
-            duty = math.sqrt((VOUT ** 2 - VIN * VOUT) * 2 * L_H * FSW
-                             / (rl * VIN ** 2))
+            # `vin` et non la constante VIN (19 V) : la premiere version
+            # rendait 0,4456 au lieu de 0,4198 sous 20 V (2026-11-22).
+            duty = math.sqrt((VOUT ** 2 - vin * VOUT) * 2 * L_H * FSW
+                             / (rl * vin ** 2))
         else:
             # D = 1 - (Vin - I.R_boucle) / (Vout + Vf), avec
             # R_boucle = DCR + Ron.D. Estimation en une passe ; la charge
@@ -197,7 +250,7 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
                  f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
-                 f"({vref:.4f} - V(nout)), 0.05, 0.95)",
+                 f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
                  f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))
@@ -227,15 +280,23 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
     elif nom_mos:
         bloc_s = chr(10).join((
             f"* transistor CONSTRUCTEUR Infineon IPD530N15N3, DPAK 150 V",
-            f"* variante _L1 : boitier inclus (Ls 2n, Ld 1n, Lg 3n), NON amorti",
-            f"X1   nsw  ngg  0    IPD530N15N3_L1",
+            (f"* variante _L1 : boitier inclus (Ls 2n, Ld 1n, Lg 3n), NON amorti"
+             if nom_mos != "ipd530_l0" else
+             chr(10).join((
+                 "* variante _L0 : modele NIVEAU 0 Infineon de la MEME piece --",
+                 "* elements SPICE standard seulement (MOS niveau 3, diodes,",
+                 "* sources lineaires), sans la source comportementale e_eds7",
+                 "* sur laquelle _L1 se bloque. Boitier identique (Lg 3n, Ld 1n,",
+                 "* Ls 2n), Rg interne 2,1 ohms. Retenu pour les boucles de R2."))),
+            f"X1   nsw  ngg  0    "
+            f"{'IPD530N15N3_L0' if nom_mos == 'ipd530_l0' else 'IPD530N15N3_L1'}",
             f"Rgx  ng   ngg  {rg:.4g}",
             (chr(10).join((
                  "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, etape R2",
                  "* Aucune phase ajoutee, aucune saturation possible.",
                  "* L'erreur statique residuelle mesure le gain de boucle.",
                  f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
-                 f"({vref:.4f} - V(nout)), 0.05, 0.95)",
+                 f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
                  f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
                  f"0 {{tsw}})",
                  f"Bg    ng    0  V=if(V(nctrl)>V(nramp), {vgs:.3g}, 0)"))
@@ -269,25 +330,86 @@ def etape0(p=P_VISEE, duty=None, n_mes=8, charge=False, tr=5e-9,
             "* DUREE. Les 10 ohms prendront leur sens a l'etape 3.",
             f"S1   nsw  0    ng 0 MSW",
             f".model MSW SW(Ron={RDS:.6f} Roff=1meg Vt=2.5 Vh=0)",
+            # BOUCLE P sur interrupteur ideal (carte de stabilite R2) : le
+            # modele Infineon s'y bloquait en DCM sur un front ordinaire,
+            # circuit calme (Vout 79,8 V), 2010 relachements a 222 us.
+            chr(10).join((
+                "* BOUCLE FERMEE -- correcteur PROPORTIONNEL, interrupteur ideal",
+                f"Bctrl nctrl 0  V=limit({duty:.6f} + {kp:.6g}*"
+                f"({vref:.4f} - V({vmes})), 0.05, 0.95)",
+                f"Vramp nramp 0  PULSE(0 1 0 {{tsw*0.999}} {{tsw*0.001}} "
+                f"0 {{tsw}})",
+                "Bg    ng    0  V=if(V(nctrl)>V(nramp), 5, 0)"))
+            if kp else
             f"Vg   ng   0    PULSE(0 5 0 {tr:.3e} {tr:.3e} "
             f"{{duty*tsw}} {{tsw}})"))
     sv_rg = " I(Rgx)" if nom_mos else ""
     sv_pwm = ((" V(nctrl) V(nramp)" if pwm else "")
               + (" V(nint) V(nctrl)" if ki else "")
               + (" V(nctrl)" if kp else ""))
+    # SAUVEGARDE SOBRE : les longues fenetres de la carte de stabilite
+    # (des milliers de periodes) font des .raw de plusieurs centaines de Mo
+    # avec les 22 traces completes. On ne garde que ce que lisent les
+    # .meas (I(Vbat), I(L1), I(Vd)) et la boucle (V(nout), V(nctrl)) --
+    # le .save couvre TOUJOURS les .meas, c'est la regle qui a manque le
+    # 2026-11-22 quand la netlist avait ete charcutee apres coup.
+    if sobre:
+        sauve = f".save V(nout) I(L1) I(Vd) I(Vbat){sv_pwm}"
+    else:
+        sauve = (f".save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) "
+                 f"V(nda) V(ngg){sv_pwm}\n"
+                 f".save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) "
+                 f"I(Cosn) I(Lb){sv_rg}")
     tsw = 1.0 / FSW
     t0, t1 = n_etab * tsw, (n_etab + n_mes) * tsw
+    # BOUCLE P SEULEMENT. Le point de fonctionnement DC d'un hacheur n'a
+    # pas de sens : la rampe vaut 0 a t=0, le comparateur laisse la grille
+    # ON en continu, et l'inductance est un court-circuit -- 114,65 A
+    # releves dans p_temoin.op.raw le 2026-11-22. Le transitoire partait
+    # de la et chassait Vout hors du domaine des modeles constructeur
+    # (MOSFET 150 V) : blocage a 10,9 us, 2010 relachements de tolerance.
+    # `.ic I(L1)=` impose le courant moyen attendu PENDANT l'OP (la
+    # reference LTspice l'admet pour les courants d'inductance), donc le
+    # transitoire part du voisinage du regime etabli. Vout est deja tenu
+    # par le ic= du condensateur de sortie, constate dans le meme .op.raw.
+    bloc_ic = f".ic I(L1)={a['iin']:.4f}" + chr(10) if kp else ""
     # DEUX SORTIES AU CHOIX, pour montrer ce que la topologie du banc change
     if charge:
         rl = VOUT ** 2 / p if rl is None else rl
         bloc_sortie = "\n".join((
             "* sortie sur CHARGE : le point se stabilise seul",
             f"Rl   nout 0    {rl:.4f}",
-            f"Cout nout 0    {cout:.4e} ic={VOUT:.1f}"))
+            (f"Cout nout 0    {cout:.4e} ic={VOUT:.1f}"
+             if not cout_we else cout_wurth(cout_we)[0])))
+        # ECHELON DE CHARGE (etape R2, carte de stabilite) : une seconde
+        # resistance branchee a t_step par un interrupteur commande. Ron
+        # 1 mOhm devant des centaines d'ohms, front de 100 ns : l'echelon
+        # est franc a l'echelle de la boucle (kHz) sans etre une marche
+        # infiniment raide pour le solveur.
+        if echelon:
+            # (r2, t_step) branche r2 a t_step (charge qui MONTE) ;
+            # (r2, t_step, "-") part avec r2 branchee et l'ouvre a t_step
+            # (charge qui DESCEND, ex. 40 -> 20 W).
+            r2, t_step = echelon[:2]
+            baisse = len(echelon) > 2 and echelon[2] == "-"
+            v0, v1 = (1, 0) if baisse else (0, 1)
+            bloc_sortie += "\n" + "\n".join((
+                f"* echelon de charge : {'-' if baisse else '+'} {r2:.4g} ohms "
+                f"a t = {t_step:.6e} s",
+                f"Rl2  nout nrl2 {r2:.4f}",
+                f"Sstp nrl2 0    nstp 0 MSTP",
+                f".model MSTP SW(Ron=1m Roff=1G Vt=0.5 Vh=0)",
+                f"Vstp nstp 0    PWL(0 {v0} {t_step:.6e} {v0} "
+                f"{t_step + 100e-9:.6e} {v1})"))
     else:
         bloc_sortie = "\n".join((
             "* sortie RAIDE : aucun rappel, le point est sur un fil",
             f"Vo   nout 0    DC {VOUT:.1f}"))
+    if tau_mes:
+        bloc_sortie += chr(10) + chr(10).join((
+            f"* mesure de Vout : filtre RC anti-repliement ADC, tau {tau_mes*1e6:.3g} us",
+            "Rfm  nout nvm  1k",
+            f"Cfm  nvm  0    {tau_mes/1e3:.4e} ic={VOUT:.1f}"))
     return f"""* ETAPE 0 -- boost TOUT IDEAL, {VIN:.0f} V -> {VOUT:.0f} V, {p:.0f} W
 * Aucun modele constructeur. Interrupteur et diode sont des .model simples.
 * But : valider cablage, topologie, physique. PAS la fidelite.
@@ -322,10 +444,9 @@ Cosn nsw  0    {max(c_noeud, 1e-18):.3e}
 Vd   nd   nout DC 0
 
 .options plotwinsize=0
-.tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
+{bloc_ic}.tran 0 {t1:.6e} {t0:.6e} {dtmax:.3e}
 
-.save V(nsw) V(nin) V(nout) V(n1l) V(n2l) V(nsl) V(ng) V(nda) V(ngg){sv_pwm}
-.save I(L1) I(Vd) I(Vbat) I(Vsl) I(Rp_l) I(Cp_l) I(Rs_l) I(Cosn) I(Lb){sv_rg}
+{sauve}
 .meas TRAN iin  AVG -I(Vbat)     FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN il   AVG I(L1)        FROM {t0:.6e} TO {t1:.6e}
 .meas TRAN ilmx MAX I(L1)        FROM {t0:.6e} TO {t1:.6e}
